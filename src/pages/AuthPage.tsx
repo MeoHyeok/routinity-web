@@ -31,7 +31,7 @@ export function AuthPage() {
   return (
     <div className="flex-1 flex flex-col justify-center px-6 py-12 gap-7">
       <div className="flex flex-col items-center gap-3 mb-4">
-        <div className="w-[76px] h-[76px] rounded-full bg-routinity-card flex items-center justify-center text-4xl">✅</div>
+        <img src={`${import.meta.env.BASE_URL}app-icon-192.png`} alt="루티니티" className="w-[76px] h-[76px] rounded-[18px]" />
         <h1 className="text-3xl font-bold">루티니티</h1>
       </div>
 
