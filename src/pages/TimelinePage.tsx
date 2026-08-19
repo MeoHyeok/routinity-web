@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchLogs, deleteLog, logDisplayName, kstDateKey, type LogEntry } from '../lib/api'
+import { fetchLogs, deleteLog, logDisplayName, logIcon, kstDateKey, type LogEntry } from '../lib/api'
 
 const timeFormatter = new Intl.DateTimeFormat('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Seoul' })
 
@@ -9,6 +9,7 @@ export function TimelinePage() {
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [logs, setLogs] = useState<LogEntry[] | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     setLogs(null)
@@ -17,8 +18,13 @@ export function TimelinePage() {
   }, [selectedDate])
 
   async function handleDelete(id: string) {
-    await deleteLog(id)
-    setLogs((prev) => prev?.filter((l) => l.id !== id) ?? null)
+    setDeleteError(null)
+    try {
+      await deleteLog(id)
+      setLogs((prev) => prev?.filter((l) => l.id !== id) ?? null)
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : '삭제 실패')
+    }
   }
 
   const sorted = logs ? [...logs].sort((a, b) => a.timestamp.localeCompare(b.timestamp)) : []
@@ -59,17 +65,8 @@ export function TimelinePage() {
           ))}
         </ul>
       )}
+
+      {deleteError && <p className="text-sm text-red-400">{deleteError}</p>}
     </div>
   )
-}
-
-function logIcon(type: LogEntry['type']): string {
-  switch (type) {
-    case 'wake': return '☀️'
-    case 'sleep': return '🌙'
-    case 'meal_start': return '🍴'
-    case 'meal_end': return '✅'
-    case 'study_start': return '📖'
-    case 'study_end': return '✅'
-  }
 }

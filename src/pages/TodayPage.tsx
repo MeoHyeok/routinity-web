@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Card } from '../components/Card'
 import {
-  fetchScores, recordLog, GoalTargetType,
+  fetchScores, recordLog, GoalTargetType, logDisplayName, logIcon,
   type LogEntry, type LogType, type ScoresResponse,
 } from '../lib/api'
 import { fetchTodayLogsWithCarryover } from '../lib/todayLogs'
@@ -268,24 +268,3 @@ function Stopwatch({ since }: { since: Date }) {
   return <span className="text-xs text-routinity-cyan font-mono">{h}:{m}:{s}</span>
 }
 
-function logDisplayName(type: LogType): string {
-  switch (type) {
-    case 'wake': return '기상'
-    case 'sleep': return '취침'
-    case 'meal_start': return '식사 시작'
-    case 'meal_end': return '식사 종료'
-    case 'study_start': return '공부 시작'
-    case 'study_end': return '공부 종료'
-  }
-}
-
-function logIcon(type: LogType): string {
-  switch (type) {
-    case 'wake': return '☀️'
-    case 'sleep': return '🌙'
-    case 'meal_start': return '🍴'
-    case 'meal_end': return '✅'
-    case 'study_start': return '📖'
-    case 'study_end': return '✅'
-  }
-}

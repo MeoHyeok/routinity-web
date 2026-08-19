@@ -19,13 +19,24 @@ async function call<T>(path: string, options: { method?: string; body?: unknown 
   })
 
   if (res.status === 204) return undefined as T
+  if (res.status === 429) throw new ApiError('요청이 너무 많아요. 잠시 후 다시 시도해주세요.')
 
   const text = await res.text()
-  const json = text ? JSON.parse(text) : {}
+  let json: unknown = {}
+  if (text) {
+    try {
+      json = JSON.parse(text)
+    } catch {
+      // Non-JSON body (e.g. an infra-level error page) shouldn't leak a raw parse error to the UI.
+      throw new ApiError(res.ok ? '서버 응답을 처리하지 못했어요.' : `요청 실패 (${res.status})`)
+    }
+  }
 
   if (!res.ok) {
-    if (res.status === 429) throw new ApiError('요청이 너무 많아요. 잠시 후 다시 시도해주세요.')
-    throw new ApiError(typeof json.error === 'string' ? json.error : `요청 실패 (${res.status})`)
+    const message = json && typeof json === 'object' && typeof (json as { error?: unknown }).error === 'string'
+      ? (json as { error: string }).error
+      : `요청 실패 (${res.status})`
+    throw new ApiError(message)
   }
   return json as T
 }
@@ -49,6 +60,17 @@ export function logDisplayName(type: LogType): string {
     case 'meal_end': return '식사 종료'
     case 'study_start': return '공부 시작'
     case 'study_end': return '공부 종료'
+  }
+}
+
+export function logIcon(type: LogType): string {
+  switch (type) {
+    case 'wake': return '☀️'
+    case 'sleep': return '🌙'
+    case 'meal_start': return '🍴'
+    case 'meal_end': return '✅'
+    case 'study_start': return '📖'
+    case 'study_end': return '✅'
   }
 }
 

@@ -44,21 +44,29 @@ export function GoalsPage() {
     setErrorMessage(null)
     setSavedMessage(null)
     setIsSaving(true)
-    let savedAnything = false
-    let saveError: string | null = null
-    // Attempted independently so one field failing doesn't stop the other's edit from being sent.
+    // Fired concurrently (not awaited one after another) and caught independently so one field
+    // failing doesn't stop the other's edit from being sent.
+    const attempts: Promise<{ ok: boolean; error: string | null }>[] = []
     if (wakeTime) {
-      try { await upsertGoal(GoalTargetType.wakeTime, wakeTime); savedAnything = true }
-      catch (e) { saveError = e instanceof Error ? e.message : '저장 실패' }
+      attempts.push(
+        upsertGoal(GoalTargetType.wakeTime, wakeTime)
+          .then(() => ({ ok: true, error: null }))
+          .catch((e) => ({ ok: false, error: e instanceof Error ? e.message : '저장 실패' })),
+      )
     }
     if (studyMinutes) {
-      try { await upsertGoal(GoalTargetType.studyDuration, studyMinutes); savedAnything = true }
-      catch (e) { saveError = e instanceof Error ? e.message : '저장 실패' }
+      attempts.push(
+        upsertGoal(GoalTargetType.studyDuration, studyMinutes)
+          .then(() => ({ ok: true, error: null }))
+          .catch((e) => ({ ok: false, error: e instanceof Error ? e.message : '저장 실패' })),
+      )
     }
+    const results = await Promise.all(attempts)
     await load()
     setIsSaving(false)
-    if (saveError) setErrorMessage(saveError)
-    else if (savedAnything) setSavedMessage('저장되었습니다.')
+    const failure = results.find((r) => !r.ok)
+    if (failure) setErrorMessage(failure.error)
+    else if (results.some((r) => r.ok)) setSavedMessage('저장되었습니다.')
   }
 
   async function handleDelete(type: string) {

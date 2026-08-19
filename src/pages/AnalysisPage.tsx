@@ -165,21 +165,23 @@ function WeekdaySummary({ title, label, score, color }: { title: string; label: 
 function TrendChart({ points }: { points: DailyTrendPoint[] }) {
   const width = 320
   const height = 140
-  const scored = points.filter((p) => p.dailyScore !== null) as (DailyTrendPoint & { dailyScore: number })[]
+  const scored = points
+    .map((point, index) => ({ point, index }))
+    .filter((x): x is { point: DailyTrendPoint & { dailyScore: number }; index: number } => x.point.dailyScore !== null)
   if (scored.length < 2) {
     return <div className="h-[140px] flex items-center justify-center text-white/40 text-sm">데이터가 더 필요해요</div>
   }
   const xFor = (i: number) => (i / (points.length - 1)) * width
   const yFor = (score: number) => height - (score / 100) * height
-  const path = scored.map((p) => `${xFor(points.indexOf(p))},${yFor(p.dailyScore)}`).join(' ')
+  const path = scored.map(({ point, index }) => `${xFor(index)},${yFor(point.dailyScore)}`).join(' ')
   return (
     <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-[140px]">
       {[0, 25, 50, 75, 100].map((y) => (
         <line key={y} x1={0} x2={width} y1={height - (y / 100) * height} y2={height - (y / 100) * height} stroke="rgba(255,255,255,0.06)" />
       ))}
       <polyline points={path} fill="none" stroke="#8c5cf5" strokeWidth={2} />
-      {scored.map((p) => (
-        <circle key={p.date.toISOString()} cx={xFor(points.indexOf(p))} cy={yFor(p.dailyScore)} r={3} fill="#8c5cf5" />
+      {scored.map(({ point, index }) => (
+        <circle key={point.date.toISOString()} cx={xFor(index)} cy={yFor(point.dailyScore)} r={3} fill="#8c5cf5" />
       ))}
       {points.map((p, i) => (
         <text key={p.date.toISOString()} x={xFor(i)} y={height - 4} fontSize={9} fill="rgba(255,255,255,0.4)" textAnchor="middle">
