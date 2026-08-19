@@ -6,6 +6,13 @@ import { fetchGoals, upsertGoal, deleteGoal, GoalTargetType } from '../lib/api'
 const starterWakeTime = '07:00'
 const starterStudyMinutes = '120'
 
+// Mirrors the server's own "target_value must be a positive integer (minutes)" rule for
+// study_duration, checked client-side first so the raw/ungrammatical server error never surfaces.
+function isPositiveIntegerString(value: string): boolean {
+  const trimmed = value.trim()
+  return /^-?\d+$/.test(trimmed) && Number(trimmed) >= 1
+}
+
 export function GoalsPage() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
@@ -48,12 +55,16 @@ export function GoalsPage() {
     // failing doesn't stop the other's edit from being sent.
     const attempts: Promise<unknown>[] = []
     if (wakeTime) attempts.push(upsertGoal(GoalTargetType.wakeTime, wakeTime))
-    if (studyMinutes) attempts.push(upsertGoal(GoalTargetType.studyDuration, studyMinutes))
+    const validationError = studyMinutes && !isPositiveIntegerString(studyMinutes)
+      ? '공부 시간 목표는 1 이상의 숫자(분)로 입력해주세요.'
+      : null
+    if (studyMinutes && !validationError) attempts.push(upsertGoal(GoalTargetType.studyDuration, studyMinutes))
     const results = await Promise.allSettled(attempts)
     await load()
     setIsSaving(false)
     const failure = results.find((r): r is PromiseRejectedResult => r.status === 'rejected')
     if (failure) setErrorMessage(failure.reason instanceof Error ? failure.reason.message : '저장 실패')
+    else if (validationError) setErrorMessage(validationError)
     else if (results.some((r) => r.status === 'fulfilled')) setSavedMessage('저장되었습니다.')
   }
 
