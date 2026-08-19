@@ -20,7 +20,7 @@ export function SettingsPage() {
       <p className="text-xs text-white/40">브라우저 알림은 웹 버전에서 지원하지 않아요 — iOS 앱에서는 기상·취침 기록을 깜빡했을 때 하루 한 번씩 알려드려요.</p>
 
       <button
-        onClick={async () => { try { await signOut() } finally { navigate('/') } }}
+        onClick={async () => { try { await signOut() } catch { /* best-effort sign-out; still navigate away */ } finally { navigate('/') } }}
         className="rounded-2xl bg-routinity-card border border-routinity-border px-4 py-3.5 text-red-400 text-left font-medium"
       >
         🚪 로그아웃

@@ -46,27 +46,15 @@ export function GoalsPage() {
     setIsSaving(true)
     // Fired concurrently (not awaited one after another) and caught independently so one field
     // failing doesn't stop the other's edit from being sent.
-    const attempts: Promise<{ ok: boolean; error: string | null }>[] = []
-    if (wakeTime) {
-      attempts.push(
-        upsertGoal(GoalTargetType.wakeTime, wakeTime)
-          .then(() => ({ ok: true, error: null }))
-          .catch((e) => ({ ok: false, error: e instanceof Error ? e.message : '저장 실패' })),
-      )
-    }
-    if (studyMinutes) {
-      attempts.push(
-        upsertGoal(GoalTargetType.studyDuration, studyMinutes)
-          .then(() => ({ ok: true, error: null }))
-          .catch((e) => ({ ok: false, error: e instanceof Error ? e.message : '저장 실패' })),
-      )
-    }
-    const results = await Promise.all(attempts)
+    const attempts: Promise<unknown>[] = []
+    if (wakeTime) attempts.push(upsertGoal(GoalTargetType.wakeTime, wakeTime))
+    if (studyMinutes) attempts.push(upsertGoal(GoalTargetType.studyDuration, studyMinutes))
+    const results = await Promise.allSettled(attempts)
     await load()
     setIsSaving(false)
-    const failure = results.find((r) => !r.ok)
-    if (failure) setErrorMessage(failure.error)
-    else if (results.some((r) => r.ok)) setSavedMessage('저장되었습니다.')
+    const failure = results.find((r): r is PromiseRejectedResult => r.status === 'rejected')
+    if (failure) setErrorMessage(failure.reason instanceof Error ? failure.reason.message : '저장 실패')
+    else if (results.some((r) => r.status === 'fulfilled')) setSavedMessage('저장되었습니다.')
   }
 
   async function handleDelete(type: string) {

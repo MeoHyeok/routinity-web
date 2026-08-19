@@ -14,6 +14,7 @@ export function TimelinePage() {
   useEffect(() => {
     setLogs(null)
     setErrorMessage(null)
+    setDeleteError(null)
     fetchLogs(selectedDate).then(setLogs).catch((e) => setErrorMessage(e.message))
   }, [selectedDate])
 
