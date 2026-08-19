@@ -55,13 +55,23 @@ export function computeRoutineDayMetrics(logs: LogEntry[], now: Date = new Date(
   const totalStudyMinutes = totalMinutes('study_start', 'study_end')
   const actualWakeTime = sorted.find((l) => l.type === 'wake')
   const actualWakeDate = actualWakeTime ? new Date(actualWakeTime.timestamp) : null
+  const wakeOpenSince = openStart('wake', 'sleep')
 
+  // Once 취침 closes the session, "so far" should stop at that moment — otherwise reopening the
+  // app later the same KST day (before a new 기상) keeps counting 휴식 upward past the point the
+  // user told the app they'd gone to bed. Only applies while the session is actually closed
+  // (wakeOpenSince == null); if a later 기상 reopened it, count through to `now` as usual.
   const restMinutesSoFar = actualWakeDate
-    ? Math.max(0, Math.floor((now.getTime() - actualWakeDate.getTime()) / 60000) - totalMealMinutes - totalStudyMinutes)
+    ? (() => {
+        const lastSleep = [...sorted].reverse().find((l) => l.type === 'sleep')
+        const end = wakeOpenSince === null ? (lastSleep ? new Date(lastSleep.timestamp) : now) : now
+        const elapsed = Math.max(0, Math.floor((end.getTime() - actualWakeDate.getTime()) / 60000))
+        return Math.max(0, elapsed - totalMealMinutes - totalStudyMinutes)
+      })()
     : null
 
   return {
-    wakeOpenSince: openStart('wake', 'sleep'),
+    wakeOpenSince,
     mealOpenSince: openStart('meal_start', 'meal_end'),
     studyOpenSince: openStart('study_start', 'study_end'),
     hasLoggedWake: logs.some((l) => l.type === 'wake'),
