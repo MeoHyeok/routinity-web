@@ -1,32 +1,22 @@
-# React + TypeScript + Vite
+# 루티니티 (routinity-web)
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+루티니티의 웹 버전 — React + Vite + TypeScript. iOS 클라이언트([routinity-ios](https://github.com/MeoHyeok/routinity-ios))와 완전히 같은 Supabase 백엔드([routinity-backend](https://github.com/MeoHyeok/routinity-backend))를 그대로 사용합니다.
 
-Currently, two official plugins are available:
+## 화면
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **로그인/가입**: Supabase Auth (이메일/비밀번호)
+- **오늘**: 원탭 기록(기상/식사/공부/취침), 오늘의 루틴 점수, 연속 달성일
+- **분석**: 주간/월간 루틴 점수 추이, 로스 분석, 요일별 베스트/워스트
+- **AI 코치**: 일간/주간/월간 AI 리포트, 목표 제안
+- **목표 설정 / 타임라인**: 설정(⚙️)에서 진입
 
-## React Compiler
+## 개발
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## 배포
+
+`main` 브랜치 푸시 시 GitHub Actions가 자동으로 빌드해서 GitHub Pages로 배포합니다 (`.github/workflows/deploy.yml`). 별도 서버/백엔드 배포는 필요 없습니다 — Supabase Edge Functions를 직접 호출합니다.
