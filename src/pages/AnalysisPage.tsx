@@ -15,12 +15,20 @@ export function AnalysisPage() {
   const [points, setPoints] = useState<DailyTrendPoint[] | null>(null)
   const [insights, setInsights] = useState<Insights | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [reloadTick, setReloadTick] = useState(0)
 
   useEffect(() => {
+    // Guards against a slower, now-stale request (e.g. the previous window) resolving after a
+    // newer one already has — without this, whichever request happens to finish last wins even
+    // if it's answering a question ("주간"?) the UI has since moved on from.
+    let ignore = false
     setPoints(null)
     setErrorMessage(null)
-    loadTrend(window === 'weekly' ? 7 : 30).then(setPoints).catch((e) => setErrorMessage(e.message))
-  }, [window])
+    loadTrend(window === 'weekly' ? 7 : 30)
+      .then((result) => { if (!ignore) setPoints(result) })
+      .catch((e) => { if (!ignore) setErrorMessage(e.message) })
+    return () => { ignore = true }
+  }, [window, reloadTick])
 
   useEffect(() => {
     fetchInsights().then(setInsights).catch(() => {})
@@ -55,7 +63,14 @@ export function AnalysisPage() {
       </div>
 
       {!points ? (
-        <div className="flex justify-center py-10"><Spinner /></div>
+        errorMessage ? (
+          <div className="flex flex-col items-center gap-3 py-10">
+            <p className="text-sm text-red-400 text-center">{errorMessage}</p>
+            <button onClick={() => setReloadTick((t) => t + 1)} className="text-sm font-semibold text-routinity-violet">다시 시도</button>
+          </div>
+        ) : (
+          <div className="flex justify-center py-10"><Spinner /></div>
+        )
       ) : (
         <>
           <Card glow>

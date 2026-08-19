@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Card } from '../components/Card'
 import {
@@ -23,7 +23,14 @@ export function TodayPage() {
   const [recording, setRecording] = useState<LogType | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
+  // Guards against two overlapping `load()` calls (e.g. React StrictMode's double-invoked mount
+  // effect, or a retry tap landing while an earlier call is still in flight) — only the most
+  // recent call's result is allowed to touch state, so a slower stale call can't clobber a
+  // faster newer one (or worse, apply its error on top of the newer call's already-good data).
+  const loadRequestId = useRef(0)
+
   const load = useCallback(async () => {
+    const requestId = ++loadRequestId.current
     setErrorMessage(null)
     try {
       const [logsResult, scoresResult, trendResult] = await Promise.all([
@@ -33,11 +40,13 @@ export function TodayPage() {
         // on top of the calls above risks the 60/min rate limit on a single page load.
         loadTrend(14),
       ])
+      if (requestId !== loadRequestId.current) return
       setLogs(logsResult.logs)
       setIsCarryover(logsResult.isCarryover)
       setScores(scoresResult)
       setStreakPoints(trendResult)
     } catch (e) {
+      if (requestId !== loadRequestId.current) return
       setErrorMessage(e instanceof Error ? e.message : '데이터를 불러오지 못했어요.')
     }
   }, [])
@@ -58,8 +67,15 @@ export function TodayPage() {
 
   if (!logs) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <Spinner />
+      <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6">
+        {errorMessage ? (
+          <>
+            <p className="text-sm text-red-400 text-center">{errorMessage}</p>
+            <button onClick={load} className="text-sm font-semibold text-routinity-violet">다시 시도</button>
+          </>
+        ) : (
+          <Spinner />
+        )}
       </div>
     )
   }
@@ -135,15 +151,15 @@ export function TodayPage() {
       <div className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold text-white/60">간편 기록</h2>
         <QuickLogButton
-          icon="🌙" openSince={metrics.wakeOpenSince} startType="wake" endType="sleep"
+          openSince={metrics.wakeOpenSince} startType="wake" endType="sleep"
           isLocked={false} recording={recording} onTap={handleRecord}
         />
         <QuickLogButton
-          icon="🍴" openSince={metrics.mealOpenSince} startType="meal_start" endType="meal_end"
+          openSince={metrics.mealOpenSince} startType="meal_start" endType="meal_end"
           isLocked={metrics.wakeOpenSince === null || metrics.studyOpenSince !== null} recording={recording} onTap={handleRecord}
         />
         <QuickLogButton
-          icon="📖" openSince={metrics.studyOpenSince} startType="study_start" endType="study_end"
+          openSince={metrics.studyOpenSince} startType="study_start" endType="study_end"
           isLocked={metrics.wakeOpenSince === null || metrics.mealOpenSince !== null} recording={recording} onTap={handleRecord}
           showsStopwatch
         />
@@ -210,14 +226,15 @@ function MealRestRow({ icon, value, label }: { icon: string; value: string; labe
 }
 
 function QuickLogButton({
-  icon, openSince, startType, endType, isLocked, recording, onTap, showsStopwatch,
+  openSince, startType, endType, isLocked, recording, onTap, showsStopwatch,
 }: {
-  icon: string; openSince: Date | null; startType: LogType; endType: LogType
+  openSince: Date | null; startType: LogType; endType: LogType
   isLocked: boolean; recording: LogType | null; onTap: (type: LogType) => void; showsStopwatch?: boolean
 }) {
   const inProgress = openSince !== null
   const type = inProgress ? endType : startType
   const displayName = logDisplayName(type)
+  const icon = logIcon(type)
   const isRecordingThis = recording === startType || recording === endType
   return (
     <button
@@ -259,5 +276,16 @@ function logDisplayName(type: LogType): string {
     case 'meal_end': return '식사 종료'
     case 'study_start': return '공부 시작'
     case 'study_end': return '공부 종료'
+  }
+}
+
+function logIcon(type: LogType): string {
+  switch (type) {
+    case 'wake': return '☀️'
+    case 'sleep': return '🌙'
+    case 'meal_start': return '🍴'
+    case 'meal_end': return '✅'
+    case 'study_start': return '📖'
+    case 'study_end': return '✅'
   }
 }

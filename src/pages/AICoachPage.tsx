@@ -19,13 +19,18 @@ export function AICoachPage() {
   const [points, setPoints] = useState<DailyTrendPoint[]>([])
 
   useEffect(() => {
+    // Same stale-response guard as AnalysisPage: a slower request for a period the user has
+    // since navigated away from shouldn't be able to overwrite what's on screen after a newer
+    // one already resolved.
+    let ignore = false
     setIsLoading(true)
     setReport(null)
     setErrorMessage(null)
     fetchReport(period)
-      .then(setReport)
-      .catch((e) => setErrorMessage(e.message))
-      .finally(() => setIsLoading(false))
+      .then((result) => { if (!ignore) setReport(result) })
+      .catch((e) => { if (!ignore) setErrorMessage(e.message) })
+      .finally(() => { if (!ignore) setIsLoading(false) })
+    return () => { ignore = true }
   }, [period])
 
   useEffect(() => {
