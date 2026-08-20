@@ -4,19 +4,38 @@ const FUNCTIONS_BASE = 'https://noqvrfewkyfdrsoaszmz.supabase.co/functions/v1'
 
 export class ApiError extends Error {}
 
+let requestCounter = 0
+
 /** Mirrors RoutinityApp's `friendlyErrorMessage` — edge functions always error with `{ "error": "..." }`. */
 async function call<T>(path: string, options: { method?: string; body?: unknown } = {}): Promise<T> {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) throw new ApiError('로그인이 필요해요.')
 
-  const res = await fetch(`${FUNCTIONS_BASE}/${path}`, {
-    method: options.method ?? 'GET',
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      'Content-Type': 'application/json',
-    },
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  })
+  const method = options.method ?? 'GET'
+  const requestId = ++requestCounter
+  // Distinguishes "the request never left the browser" (fetch() itself throws — a network
+  // failure, CORS block, or something upstream like an extension/CSP intercepting it before it
+  // ever reaches Supabase) from "the request reached the server and it responded" (fetch()
+  // resolves with a Response, even for 4xx/5xx). Backend added structured request logging
+  // server-side, so cross-referencing request id/timestamp here against their logs answers
+  // "did this specific call ever arrive" when server instability is reported.
+  console.info(`[api#${requestId}] -> ${method} ${path}`)
+
+  let res: Response
+  try {
+    res = await fetch(`${FUNCTIONS_BASE}/${path}`, {
+      method,
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    })
+  } catch (e) {
+    console.error(`[api#${requestId}] NETWORK-LEVEL FAILURE — request never reached the server (fetch() itself threw):`, e)
+    throw e
+  }
+  console.info(`[api#${requestId}] <- ${res.status} ${method} ${path}`)
 
   if (res.status === 204) return undefined as T
   if (res.status === 429) throw new ApiError('요청이 너무 많아요. 잠시 후 다시 시도해주세요.')

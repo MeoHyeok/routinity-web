@@ -4,6 +4,7 @@ import { Settings, Sun, BookOpen, Utensils, Coffee, TriangleAlert, Inbox, type L
 import { Card } from '../components/Card'
 import { LogTypeIcon } from '../components/LogTypeIcon'
 import { SleepReportModal } from '../components/SleepReportModal'
+import { TimeBreakdown } from '../components/TimeBreakdown'
 import {
   fetchScores, fetchLogs, fetchReport, recordLog, kstDateKey, GoalTargetType, logDisplayName,
   type LogEntry, type LogType, type Report, type ScoresResponse,
@@ -228,36 +229,51 @@ export function TodayPage() {
             className="bg-white/6 border border-routinity-border rounded-lg px-2 py-1 text-xs text-white outline-none"
           />
         </div>
-        <Card className="!p-0 overflow-hidden">
-          {(() => {
-            const displayedLogs = isViewingToday ? logs : pastLogs
-            if (!isViewingToday && pastLogsError) {
-              return <p className="text-sm text-red-400 text-center py-8">{pastLogsError}</p>
-            }
-            if (!displayedLogs) {
-              return <div className="flex justify-center py-8"><Spinner /></div>
-            }
-            if (displayedLogs.length === 0) {
-              return (
+        {(() => {
+          const displayedLogs = isViewingToday ? logs : pastLogs
+          if (!isViewingToday && pastLogsError) {
+            return <Card><p className="text-sm text-red-400 text-center py-8">{pastLogsError}</p></Card>
+          }
+          if (!displayedLogs) {
+            return <Card><div className="flex justify-center py-8"><Spinner /></div></Card>
+          }
+          if (displayedLogs.length === 0) {
+            return (
+              <Card>
                 <div className="flex flex-col items-center gap-2 py-8 text-white/40">
                   <Inbox className="w-6 h-6" />
                   <p className="text-sm">{isViewingToday ? '아직 기록이 없어요.' : '이 날짜에는 기록이 없어요.'}</p>
                 </div>
-              )
-            }
-            return (
-              <ul className="flex flex-col divide-y divide-routinity-border px-4">
-                {[...displayedLogs].sort((a, b) => a.timestamp.localeCompare(b.timestamp)).map((log) => (
-                  <li key={log.id} className="flex items-center gap-3 py-3">
-                    <div className="w-8 h-8 rounded-full bg-routinity-violet/12 flex items-center justify-center shrink-0"><LogTypeIcon type={log.type} className="w-3.5 h-3.5" /></div>
-                    <span className="flex-1 text-sm">{logDisplayName(log.type)}</span>
-                    <span className="text-white/50 text-sm">{timeOnlyFormatter.format(new Date(log.timestamp))}</span>
-                  </li>
-                ))}
-              </ul>
+              </Card>
             )
-          })()}
-        </Card>
+          }
+          // Computed client-side from that day's own logs (not the AI report's time_breakdown,
+          // which is period-scoped and cached once a day) so the chart stays live and works for
+          // any date the timeline picker lands on, not just whichever day last generated a report.
+          const dayMetrics = computeRoutineDayMetrics(displayedLogs)
+          const breakdown = {
+            meal_minutes: dayMetrics.totalMealMinutes,
+            study_minutes: dayMetrics.totalStudyMinutes,
+            rest_minutes: dayMetrics.restMinutesSoFar ?? 0,
+            active_minutes: dayMetrics.totalMealMinutes + dayMetrics.totalStudyMinutes + (dayMetrics.restMinutesSoFar ?? 0),
+          }
+          return (
+            <>
+              <TimeBreakdown breakdown={breakdown} />
+              <Card className="!p-0 overflow-hidden">
+                <ul className="flex flex-col divide-y divide-routinity-border px-4">
+                  {[...displayedLogs].sort((a, b) => a.timestamp.localeCompare(b.timestamp)).map((log) => (
+                    <li key={log.id} className="flex items-center gap-3 py-3">
+                      <div className="w-8 h-8 rounded-full bg-routinity-violet/12 flex items-center justify-center shrink-0"><LogTypeIcon type={log.type} className="w-3.5 h-3.5" /></div>
+                      <span className="flex-1 text-sm">{logDisplayName(log.type)}</span>
+                      <span className="text-white/50 text-sm">{timeOnlyFormatter.format(new Date(log.timestamp))}</span>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            </>
+          )
+        })()}
       </div>
 
       {errorMessage && (
