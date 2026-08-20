@@ -1,4 +1,4 @@
-import { fetchLogs, fetchScores, kstDateKey } from './api'
+import { fetchLogs, fetchScores, kstDateKey, shiftKstDateKey } from './api'
 import type { DailyTrendPoint } from './goalSuggestion'
 
 // Ported from RoutinityApp/ViewModels/TrendViewModel.swift. Each day costs one /scores + one
@@ -7,17 +7,15 @@ import type { DailyTrendPoint } from './goalSuggestion'
 // own, same bug fixed in the iOS client.
 const MAX_CONCURRENT_DAYS = 10
 
-// Builds the `days`-length window ending today, entirely via KST date-key arithmetic (not
-// Date.setDate, which shifts by a calendar day in the *runtime's* local timezone) — same
-// reasoning as TodayPage's shiftKstDate: a day-step must land on the same KST date regardless of
-// what timezone the browser itself is in, including across a DST transition in that timezone.
-function kstDateWindow(days: number): Date[] {
-  const [y, m, d] = kstDateKey(new Date()).split('-').map(Number)
+// Builds a `days`-length window via shiftKstDateKey (shared with TodayPage's own day-stepping),
+// ending `endOffsetDays` before today — 0 (the default) ends on today itself, 1 ends on
+// yesterday. The offset lets a caller that already has today's score from elsewhere (TodayPage)
+// fetch just the preceding days instead of re-fetching today a second time.
+function kstDateWindow(days: number, endOffsetDays = 0): Date[] {
+  const todayKey = kstDateKey(new Date())
   return Array.from({ length: days }, (_, i) => {
-    const delta = days - 1 - i
-    const utcMidnight = new Date(Date.UTC(y, m - 1, d - delta))
-    const dateKey = new Intl.DateTimeFormat('en-CA', { timeZone: 'UTC' }).format(utcMidnight)
-    return new Date(`${dateKey}T00:00:00+09:00`)
+    const delta = -(days - 1 - i) - endOffsetDays
+    return new Date(`${shiftKstDateKey(todayKey, delta)}T00:00:00+09:00`)
   })
 }
 
@@ -54,9 +52,12 @@ async function fetchDayScoreOnly(date: Date): Promise<ScoreTrendPoint> {
 // Same window as loadTrend but skips the /logs fetch per day — for callers (TodayPage) that only
 // need each day's score (streak/personal-average), not its meal history. Halves the request count
 // for those callers instead of piggy-backing on the heavier fetchDay used for meal-irregularity
-// analysis (AnalysisPage).
-export async function loadScoreTrend(days: number): Promise<ScoreTrendPoint[]> {
-  const results = await fetchInBatches(kstDateWindow(days), fetchDayScoreOnly)
+// analysis (AnalysisPage). `endOffsetDays` forwards to kstDateWindow so a caller that already has
+// today's score from elsewhere (TodayPage's own fetchScores(today) call, needed there for the
+// full ScoreEntry list a bare ScoreTrendPoint doesn't carry) can fetch just the preceding days
+// instead of hitting /scores for today a second time.
+export async function loadScoreTrend(days: number, endOffsetDays = 0): Promise<ScoreTrendPoint[]> {
+  const results = await fetchInBatches(kstDateWindow(days, endOffsetDays), fetchDayScoreOnly)
   return results.sort((a, b) => a.date.getTime() - b.date.getTime())
 }
 

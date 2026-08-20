@@ -93,6 +93,21 @@ export function kstDateKey(date: Date): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(date)
 }
 
+// Shifts a KST date-key by whole days, entirely in date-key space — shared by every caller that
+// needs to step a KST calendar date (TodayPage's timeline picker, trend.ts's day windows) so the
+// arithmetic (and its correctness) lives in exactly one place. Deliberately not Date.setDate,
+// which shifts by a calendar day in the *runtime's* local timezone rather than KST. Reads the
+// shifted date back off Date.UTC's own normalized fields instead of round-tripping through
+// Intl.DateTimeFormat, since Date.UTC already resolves day-of-month over/underflow correctly.
+export function shiftKstDateKey(dateKey: string, deltaDays: number): string {
+  const [y, m, d] = dateKey.split('-').map(Number)
+  const shifted = new Date(Date.UTC(y, m - 1, d + deltaDays))
+  const yy = shifted.getUTCFullYear()
+  const mm = String(shifted.getUTCMonth() + 1).padStart(2, '0')
+  const dd = String(shifted.getUTCDate()).padStart(2, '0')
+  return `${yy}-${mm}-${dd}`
+}
+
 export async function fetchLogs(date: Date): Promise<LogEntry[]> {
   return call<LogEntry[]>(`logs?date=${kstDateKey(date)}`)
 }

@@ -6,7 +6,7 @@ import { LogTypeIcon } from '../components/LogTypeIcon'
 import { SleepReportModal } from '../components/SleepReportModal'
 import { TimeBreakdown } from '../components/TimeBreakdown'
 import {
-  fetchScores, fetchLogs, fetchReport, recordLog, kstDateKey, GoalTargetType, logDisplayName,
+  fetchScores, fetchLogs, fetchReport, recordLog, kstDateKey, shiftKstDateKey, GoalTargetType, logDisplayName,
   type LogEntry, type LogType, type Report, type ScoresResponse,
 } from '../lib/api'
 import { fetchTodayLogsWithCarryover } from '../lib/todayLogs'
@@ -19,14 +19,8 @@ const weekdayFormatter = new Intl.DateTimeFormat('ko-KR', { weekday: 'long', tim
 const timeOnlyFormatter = new Intl.DateTimeFormat('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Seoul' })
 const carryoverWakeFormatter = new Intl.DateTimeFormat('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Seoul' })
 
-// Whole-day arithmetic done via the KST date-key string (not Date.setDate, which shifts by a
-// calendar day in the *runtime's* local timezone) so a day-step lands on the same KST date
-// regardless of what timezone the browser itself is in.
 function shiftKstDate(date: Date, deltaDays: number): Date {
-  const [y, m, d] = kstDateKey(date).split('-').map(Number)
-  const utcMidnight = new Date(Date.UTC(y, m - 1, d + deltaDays))
-  const shiftedKey = new Intl.DateTimeFormat('en-CA', { timeZone: 'UTC' }).format(utcMidnight)
-  return new Date(`${shiftedKey}T12:00:00+09:00`)
+  return new Date(`${shiftKstDateKey(kstDateKey(date), deltaDays)}T12:00:00+09:00`)
 }
 
 export function TodayPage() {
@@ -62,20 +56,25 @@ export function TodayPage() {
     const requestId = ++loadRequestId.current
     setErrorMessage(null)
     try {
-      const [logsResult, scoresResult, trendResult] = await Promise.all([
+      const [logsResult, scoresResult, pastTrendResult] = await Promise.all([
         fetchTodayLogsWithCarryover(),
+        // Needed here (not just for its daily_score) for the full ScoreEntry list — wakeGoal/
+        // studyGoal below read target_value/actual_value off it, which a bare ScoreTrendPoint
+        // doesn't carry.
         fetchScores(new Date()),
         // 14 days, not more — even loadScoreTrend's one /scores call per day risks piling on top
         // of the calls above toward the 60/min rate limit on a single page load. Uses
         // loadScoreTrend (not loadTrend) since streak/personal-average only need each day's
-        // score, not its full log list — skips 14 needless /logs calls loadTrend would also make.
-        loadScoreTrend(14),
+        // score, not its full log list. Fetches only the *preceding* 13 days (endOffsetDays: 1)
+        // and appends today's already-fetched score below, instead of letting loadScoreTrend
+        // re-fetch /scores for today a second time.
+        loadScoreTrend(13, 1),
       ])
       if (requestId !== loadRequestId.current) return
       setLogs(logsResult.logs)
       setIsCarryover(logsResult.isCarryover)
       setScores(scoresResult)
-      setStreakPoints(trendResult)
+      setStreakPoints([...pastTrendResult, { date: new Date(), dailyScore: scoresResult.daily_score }])
     } catch (e) {
       if (requestId !== loadRequestId.current) return
       setErrorMessage(e instanceof Error ? e.message : '데이터를 불러오지 못했어요.')
