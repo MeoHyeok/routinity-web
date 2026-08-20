@@ -142,7 +142,11 @@ export interface Report {
   date_range?: { from: string; to: string }
   content: string
   cached: boolean
-  generated_via?: 'claude' | 'template'
+  // The actual generation engine (e.g. "claude", "gemini") when a fresh report was generated,
+  // or "template" for the rule-based fallback — not narrowed to a fixed union since the backend
+  // can swap engines without a client update as long as callers treat anything but "template" as
+  // AI-generated (see AICoachPage).
+  generated_via?: string
   time_breakdown?: TimeBreakdown
   suggested_action?: string
 }

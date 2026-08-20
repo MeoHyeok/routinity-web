@@ -69,7 +69,10 @@ export function AICoachPage() {
             <div className="flex items-center gap-2 mb-3">
               <Sparkles className="w-4 h-4" />
               <span className="text-xs font-semibold text-white/60 flex-1">
-                {report.generated_via === 'claude' ? 'AI 생성 리포트' : '기본 템플릿 리포트'}
+                {/* Backend now reports the actual model behind generated_via (e.g. "claude",
+                    "gemini") rather than always "claude", so this checks for "not template"
+                    instead of hardcoding one provider's name — matches iOS's same fix. */}
+                {report.generated_via && report.generated_via !== 'template' ? 'AI 생성 리포트' : '기본 템플릿 리포트'}
               </span>
               {report.cached && <span className="text-[10px] font-semibold text-white/60 bg-white/8 rounded-full px-2 py-0.5">캐시됨</span>}
             </div>
