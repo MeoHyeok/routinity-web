@@ -19,7 +19,7 @@ const slides: Slide[] = [
     icon: Sun,
     tint: 'text-routinity-orange',
     title: '원탭으로 루틴을 기록하세요',
-    body: '기상, 식사, 공부 — 버튼 하나만 누르면 지금 이 순간이 기록돼요. 다시 누르면 종료돼요.',
+    body: '기상, 식사, 공부 — 버튼 하나만 누르면 지금 이 순간이 기록돼요. 다시 누르면 종료되고, 식사·공부 진행 중엔 취침이 잠깐 잠겨요.',
   },
   {
     icon: Target,
