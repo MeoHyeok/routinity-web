@@ -4,6 +4,33 @@ const FUNCTIONS_BASE = 'https://noqvrfewkyfdrsoaszmz.supabase.co/functions/v1'
 
 export class ApiError extends Error {}
 
+// The backend's non-429/non-5xx error bodies are English field-validation messages (see
+// docs/api-contract.md) — this was being passed straight through to the UI unmodified. Table of
+// known messages first, then pattern matches for messages that vary by field (e.g. "goals" vs
+// "logs" 400s), then a generic Korean fallback so an unrecognized message never leaks raw English
+// — the raw text still goes to the console for debugging instead of disappearing silently.
+const KNOWN_ERROR_TRANSLATIONS: Record<string, string> = {
+  'log not found': '기록을 찾을 수 없어요.',
+  'goal not found': '목표를 찾을 수 없어요.',
+  'internal server error': '서버에 문제가 생겼어요. 잠시 후 다시 시도해주세요.',
+}
+const ERROR_PATTERN_TRANSLATIONS: [RegExp, string][] = [
+  [/target_value must be at most 1440/i, '공부 시간 목표는 하루 최대 1440분(24시간)까지 입력할 수 있어요.'],
+  [/target_value must be a positive integer/i, '공부 시간 목표는 1 이상의 숫자(분)로 입력해주세요.'],
+  [/target_value must be HH:MM/i, '기상 목표는 HH:MM(24시간) 형식으로 입력해주세요.'],
+  [/type must be one of/i, '기록 종류가 올바르지 않아요.'],
+  [/date query param is required|format YYYY-MM-DD/i, '날짜 형식이 올바르지 않아요.'],
+]
+
+function translateApiError(raw: string, status: number): string {
+  if (KNOWN_ERROR_TRANSLATIONS[raw]) return KNOWN_ERROR_TRANSLATIONS[raw]
+  for (const [pattern, translated] of ERROR_PATTERN_TRANSLATIONS) {
+    if (pattern.test(raw)) return translated
+  }
+  console.error(`[api] untranslated error body (status ${status}):`, raw)
+  return `요청을 처리하지 못했어요. (${status})`
+}
+
 let requestCounter = 0
 
 /** Mirrors RoutinityApp's `friendlyErrorMessage` — edge functions always error with `{ "error": "..." }`. */
@@ -56,10 +83,10 @@ async function call<T>(path: string, options: { method?: string; body?: unknown 
   }
 
   if (!res.ok) {
-    const message = json && typeof json === 'object' && typeof (json as { error?: unknown }).error === 'string'
+    const rawMessage = json && typeof json === 'object' && typeof (json as { error?: unknown }).error === 'string'
       ? (json as { error: string }).error
-      : `요청 실패 (${res.status})`
-    throw new ApiError(message)
+      : null
+    throw new ApiError(rawMessage ? translateApiError(rawMessage, res.status) : `요청 실패 (${res.status})`)
   }
   return json as T
 }

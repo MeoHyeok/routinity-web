@@ -11,16 +11,23 @@ import { AICoachPage } from './pages/AICoachPage'
 import { GoalsPage } from './pages/GoalsPage'
 import { SettingsPage } from './pages/SettingsPage'
 
-// Shown once — the very first time this browser reaches the authenticated app, whether that's
-// right after signup or the first sign-in after confirming an email. Deliberately device-local
-// (localStorage) rather than per-account, same tradeoff RootView.swift makes on iOS: a fresh
-// browser re-showing it for an existing account beats needing a server round trip just to gate a
-// one-time tutorial.
-const ONBOARDING_KEY = 'hasSeenOnboarding'
+// Shown once — the very first time a given *account* reaches the authenticated app on this
+// browser, whether that's right after signup or the first sign-in after confirming an email.
+// localStorage (not a server round trip) so a one-time tutorial doesn't cost a network call, but
+// keyed per-account rather than one fixed device-wide key — a fixed key meant a second account
+// signing in on the same browser silently inherited the first account's "already seen" state and
+// never saw onboarding (or the default-goals auto-set it triggers) at all. Read directly off
+// localStorage each render instead of caching in state, so it re-evaluates correctly whenever
+// `session.user.id` changes (e.g. one account signs out and a different one signs in without a
+// full page reload); `onboardingVersion` is just a dummy trigger to force a re-render after
+// onFinish writes to localStorage, since that write alone doesn't cause React to re-render.
+function onboardingKeyFor(userId: string): string {
+  return `hasSeenOnboarding:${userId}`
+}
 
 function RootGate() {
   const { session, hasLoadedInitialSession } = useAuth()
-  const [hasSeenOnboarding, setHasSeenOnboarding] = useState(() => localStorage.getItem(ONBOARDING_KEY) === 'true')
+  const [, setOnboardingVersion] = useState(0)
 
   if (!hasLoadedInitialSession) {
     return (
@@ -30,8 +37,11 @@ function RootGate() {
     )
   }
   if (!session) return <AuthPage />
+
+  const onboardingKey = onboardingKeyFor(session.user.id)
+  const hasSeenOnboarding = localStorage.getItem(onboardingKey) === 'true'
   if (!hasSeenOnboarding) {
-    return <OnboardingPage onFinish={() => { localStorage.setItem(ONBOARDING_KEY, 'true'); setHasSeenOnboarding(true) }} />
+    return <OnboardingPage onFinish={() => { localStorage.setItem(onboardingKey, 'true'); setOnboardingVersion((v) => v + 1) }} />
   }
 
   return (

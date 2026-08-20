@@ -3,11 +3,10 @@ import { Sun, Target, Sparkles, type LucideIcon } from 'lucide-react'
 import { ensureDefaultGoals, DEFAULT_WAKE_TIME, DEFAULT_STUDY_MINUTES } from '../lib/defaultGoals'
 import { formatDuration } from '../components/TimeBreakdown'
 
-// Mirrors RoutinityApp's OnboardingView.swift — shown once, the first time this device reaches
-// the authenticated app, before landing on a blank 오늘 화면 with no context for what the
-// buttons do. Device-local (localStorage) rather than per-account, same tradeoff iOS makes: a
-// fresh browser re-showing it for an existing account beats needing a server round trip just to
-// gate a one-time tutorial.
+// Mirrors RoutinityApp's OnboardingView.swift — shown once per account on this browser, before
+// landing on a blank 오늘 화면 with no context for what the buttons do. Gating (see App.tsx's
+// onboardingKeyFor) is keyed per-account, not one fixed device-wide key, so a second account
+// signing in on the same browser doesn't inherit the first account's "already seen" state.
 interface Slide {
   icon: LucideIcon
   tint: string
