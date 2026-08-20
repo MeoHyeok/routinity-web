@@ -26,3 +26,13 @@ body {
   display: flex;
   flex-direction: column;
 }
+
+/* Hides the scrollbar on OnboardingPage's swipeable slide track — it's paged via scroll-snap and
+   buttons, not meant to look like a scrollable list. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
