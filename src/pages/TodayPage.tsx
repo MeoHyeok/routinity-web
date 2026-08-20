@@ -4,7 +4,7 @@ import { Settings, Sun, BookOpen, Utensils, Coffee, TriangleAlert, Inbox, type L
 import { Card } from '../components/Card'
 import { LogTypeIcon } from '../components/LogTypeIcon'
 import {
-  fetchScores, fetchLogs, recordLog, deleteLog, kstDateKey, GoalTargetType, logDisplayName,
+  fetchScores, fetchLogs, recordLog, kstDateKey, GoalTargetType, logDisplayName,
   type LogEntry, type LogType, type ScoresResponse,
 } from '../lib/api'
 import { fetchTodayLogsWithCarryover } from '../lib/todayLogs'
@@ -24,8 +24,6 @@ export function TodayPage() {
   const [streakPoints, setStreakPoints] = useState<DailyTrendPoint[]>([])
   const [recording, setRecording] = useState<LogType | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   // Timeline section's own date selection — kept local to that section rather than driving the
   // rest of the page (metrics/scores/quick-log buttons stay pinned to today regardless of what
@@ -85,24 +83,6 @@ export function TodayPage() {
       setErrorMessage(e instanceof Error ? e.message : '기록에 실패했어요.')
     } finally {
       setRecording(null)
-    }
-  }
-
-  async function handleDelete(id: string) {
-    setDeleteError(null)
-    setDeletingId(id)
-    try {
-      await deleteLog(id)
-      // Today's own logs feed the metric cards/quick-log buttons above, so a delete there needs
-      // the full load() to keep those in sync — a past date being browsed doesn't affect any of
-      // that, so it's cheaper (and doesn't burn into the 14-day trend refetch's rate-limit budget)
-      // to just drop the row locally instead.
-      if (isViewingToday) await load()
-      else setPastLogs((prev) => prev?.filter((l) => l.id !== id) ?? null)
-    } catch (e) {
-      setDeleteError(e instanceof Error ? e.message : '삭제에 실패했어요.')
-    } finally {
-      setDeletingId(null)
     }
   }
 
@@ -243,20 +223,12 @@ export function TodayPage() {
                     <div className="w-8 h-8 rounded-full bg-routinity-violet/12 flex items-center justify-center shrink-0"><LogTypeIcon type={log.type} className="w-3.5 h-3.5" /></div>
                     <span className="flex-1 text-sm">{logDisplayName(log.type)}</span>
                     <span className="text-white/50 text-sm">{timeOnlyFormatter.format(new Date(log.timestamp))}</span>
-                    <button
-                      onClick={() => handleDelete(log.id)}
-                      disabled={deletingId !== null}
-                      className="text-red-400 text-xs disabled:opacity-40"
-                    >
-                      {deletingId === log.id ? '삭제 중' : '삭제'}
-                    </button>
                   </li>
                 ))}
               </ul>
             )
           })()}
         </Card>
-        {deleteError && <p className="text-sm text-red-400">{deleteError}</p>}
       </div>
 
       {errorMessage && (
