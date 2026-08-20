@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Sun, Target, Sparkles, type LucideIcon } from 'lucide-react'
 import { ensureDefaultGoals, DEFAULT_WAKE_TIME, DEFAULT_STUDY_MINUTES } from '../lib/defaultGoals'
+import { formatDuration } from '../components/TimeBreakdown'
 
 // Mirrors RoutinityApp's OnboardingView.swift — shown once, the first time this device reaches
 // the authenticated app, before landing on a blank 오늘 화면 with no context for what the
@@ -39,14 +40,6 @@ const tintBg: Record<string, string> = {
   'text-routinity-orange': 'bg-routinity-orange/15',
   'text-routinity-cyan': 'bg-routinity-cyan/15',
   'text-routinity-violet': 'bg-routinity-violet/15',
-}
-
-function formatMinutesAsHours(minutes: string): string {
-  const total = Number(minutes)
-  const h = Math.floor(total / 60)
-  const m = total % 60
-  if (m === 0) return `${h}시간`
-  return `${h}시간 ${m}분`
 }
 
 export function OnboardingPage({ onFinish }: { onFinish: () => void }) {
@@ -94,7 +87,7 @@ export function OnboardingPage({ onFinish }: { onFinish: () => void }) {
       </div>
 
       <p className="px-8 pb-5 text-center text-xs text-white/50">
-        기상 {DEFAULT_WAKE_TIME}·공부 {formatMinutesAsHours(DEFAULT_STUDY_MINUTES)}으로 기본 목표를 설정해드렸어요. 설정 화면에서 언제든 바꾸실 수 있어요.
+        기상 {DEFAULT_WAKE_TIME}·공부 {formatDuration(Number(DEFAULT_STUDY_MINUTES))}으로 기본 목표를 설정해드렸어요. 설정 화면에서 언제든 바꾸실 수 있어요.
       </p>
 
       <div className="px-6">

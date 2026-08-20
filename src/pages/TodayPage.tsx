@@ -11,8 +11,8 @@ import {
 } from '../lib/api'
 import { fetchTodayLogsWithCarryover } from '../lib/todayLogs'
 import { computeRoutineDayMetrics, durationLabel } from '../lib/routineDayMetrics'
-import { loadTrend } from '../lib/trend'
-import { computeStreakDays, computePersonalAverageScore, type DailyTrendPoint } from '../lib/goalSuggestion'
+import { loadScoreTrend, type ScoreTrendPoint } from '../lib/trend'
+import { computeStreakDays, computePersonalAverageScore } from '../lib/goalSuggestion'
 
 const dateHeadingFormatter = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Seoul' })
 const weekdayFormatter = new Intl.DateTimeFormat('ko-KR', { weekday: 'long', timeZone: 'Asia/Seoul' })
@@ -33,7 +33,7 @@ export function TodayPage() {
   const [logs, setLogs] = useState<LogEntry[] | null>(null)
   const [isCarryover, setIsCarryover] = useState(false)
   const [scores, setScores] = useState<ScoresResponse | null>(null)
-  const [streakPoints, setStreakPoints] = useState<DailyTrendPoint[]>([])
+  const [streakPoints, setStreakPoints] = useState<ScoreTrendPoint[]>([])
   const [recording, setRecording] = useState<LogType | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
@@ -65,9 +65,11 @@ export function TodayPage() {
       const [logsResult, scoresResult, trendResult] = await Promise.all([
         fetchTodayLogsWithCarryover(),
         fetchScores(new Date()),
-        // 14 days, not more — loadTrend fires one /scores + one /logs call per day, and piling
-        // on top of the calls above risks the 60/min rate limit on a single page load.
-        loadTrend(14),
+        // 14 days, not more — even loadScoreTrend's one /scores call per day risks piling on top
+        // of the calls above toward the 60/min rate limit on a single page load. Uses
+        // loadScoreTrend (not loadTrend) since streak/personal-average only need each day's
+        // score, not its full log list — skips 14 needless /logs calls loadTrend would also make.
+        loadScoreTrend(14),
       ])
       if (requestId !== loadRequestId.current) return
       setLogs(logsResult.logs)

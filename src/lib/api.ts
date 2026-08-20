@@ -101,10 +101,6 @@ export async function recordLog(type: LogType, timestamp: Date): Promise<LogEntr
   return call<LogEntry>('logs', { method: 'POST', body: { type, timestamp: timestamp.toISOString() } })
 }
 
-export async function deleteLog(id: string): Promise<void> {
-  await call<void>(`logs?id=${id}`, { method: 'DELETE' })
-}
-
 // ---- /goals ----
 
 export const GoalTargetType = {

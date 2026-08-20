@@ -94,7 +94,14 @@ export function computeMealIrregularityRate(points: DailyTrendPoint[]): number |
   return missed / points.length
 }
 
-export function computeStreakDays(points: DailyTrendPoint[]): number {
+// Takes just the score-bearing shape rather than the full DailyTrendPoint, so callers that only
+// loaded scores (e.g. TodayPage via loadScoreTrend, which skips the /logs fetch DailyTrendPoint's
+// `scores`/`hadMeal` fields would need) can pass their lighter points straight through.
+interface ScoredPoint {
+  dailyScore: number | null
+}
+
+export function computeStreakDays(points: ScoredPoint[]): number {
   let count = 0
   for (let i = points.length - 1; i >= 0; i--) {
     const score = points[i].dailyScore
@@ -104,7 +111,7 @@ export function computeStreakDays(points: DailyTrendPoint[]): number {
   return count
 }
 
-export function computePersonalAverageScore(points: DailyTrendPoint[]): number | null {
+export function computePersonalAverageScore(points: ScoredPoint[]): number | null {
   const priorScores = points.slice(0, -1).map((p) => p.dailyScore).filter((s): s is number => s !== null)
   if (priorScores.length === 0) return null
   return Math.round(priorScores.reduce((a, b) => a + b, 0) / priorScores.length)
