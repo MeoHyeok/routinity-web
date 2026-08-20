@@ -8,17 +8,21 @@ let requestCounter = 0
 
 /** Mirrors RoutinityApp's `friendlyErrorMessage` — edge functions always error with `{ "error": "..." }`. */
 async function call<T>(path: string, options: { method?: string; body?: unknown } = {}): Promise<T> {
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) throw new ApiError('로그인이 필요해요.')
-
   const method = options.method ?? 'GET'
   const requestId = ++requestCounter
-  // Distinguishes "the request never left the browser" (fetch() itself throws — a network
-  // failure, CORS block, or something upstream like an extension/CSP intercepting it before it
-  // ever reaches Supabase) from "the request reached the server and it responded" (fetch()
-  // resolves with a Response, even for 4xx/5xx). Backend added structured request logging
-  // server-side, so cross-referencing request id/timestamp here against their logs answers
-  // "did this specific call ever arrive" when server instability is reported.
+  // Every call<T>() invocation logs here first, before anything can short-circuit it — so
+  // "did the app's own logic ever attempt this request" is answered by whether an [api#N] line
+  // exists at all, distinct from "-> "/"<- " below answering "did it reach the network / server."
+  // Backend added structured request logging server-side, so cross-referencing request id and
+  // timestamp answers "did this specific call ever arrive" when server instability is reported.
+  console.info(`[api#${requestId}] call ${method} ${path}`)
+
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) {
+    console.error(`[api#${requestId}] BLOCKED BEFORE SENDING — no Supabase session (never reached fetch())`)
+    throw new ApiError('로그인이 필요해요.')
+  }
+
   console.info(`[api#${requestId}] -> ${method} ${path}`)
 
   let res: Response
