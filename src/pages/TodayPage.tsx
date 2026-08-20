@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom'
 import { Settings, Sun, BookOpen, Utensils, Coffee, TriangleAlert, Inbox, type LucideIcon } from 'lucide-react'
 import { Card } from '../components/Card'
 import { LogTypeIcon } from '../components/LogTypeIcon'
+import { SleepReportModal } from '../components/SleepReportModal'
 import {
-  fetchScores, fetchLogs, recordLog, kstDateKey, GoalTargetType, logDisplayName,
-  type LogEntry, type LogType, type ScoresResponse,
+  fetchScores, fetchLogs, fetchReport, recordLog, kstDateKey, GoalTargetType, logDisplayName,
+  type LogEntry, type LogType, type Report, type ScoresResponse,
 } from '../lib/api'
 import { fetchTodayLogsWithCarryover } from '../lib/todayLogs'
 import { computeRoutineDayMetrics, durationLabel } from '../lib/routineDayMetrics'
@@ -24,6 +25,13 @@ export function TodayPage() {
   const [streakPoints, setStreakPoints] = useState<DailyTrendPoint[]>([])
   const [recording, setRecording] = useState<LogType | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  // Shown right after 취침 is logged — mirrors RoutinityApp's SleepReportSheet, popped
+  // automatically so the user sees that moment's daily report without navigating to AI 코치.
+  const [showSleepReport, setShowSleepReport] = useState(false)
+  const [sleepReport, setSleepReport] = useState<Report | null>(null)
+  const [sleepReportLoading, setSleepReportLoading] = useState(false)
+  const [sleepReportError, setSleepReportError] = useState<string | null>(null)
 
   // Timeline section's own date selection — kept local to that section rather than driving the
   // rest of the page (metrics/scores/quick-log buttons stay pinned to today regardless of what
@@ -79,6 +87,19 @@ export function TodayPage() {
     try {
       await recordLog(type, new Date())
       await load()
+      if (type === 'sleep') {
+        setShowSleepReport(true)
+        setSleepReportLoading(true)
+        setSleepReport(null)
+        setSleepReportError(null)
+        try {
+          setSleepReport(await fetchReport('daily'))
+        } catch (e) {
+          setSleepReportError(e instanceof Error ? e.message : '리포트를 불러오지 못했어요.')
+        } finally {
+          setSleepReportLoading(false)
+        }
+      }
     } catch (e) {
       setErrorMessage(e instanceof Error ? e.message : '기록에 실패했어요.')
     } finally {
@@ -173,17 +194,25 @@ export function TodayPage() {
 
       <div className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold text-white/60">간편 기록</h2>
+        {/* 기상 is never locked (starting a day must always be possible), but 취침 locks while
+            식사/공부 is still running — otherwise closing the day leaves that session open with
+            no way to ever end it (wakeOpenSince becomes null, which used to lock its own end
+            button too). 식사/공부's own end action is never locked, only their start — so a
+            session that's already open can always be closed regardless of the other's state. */}
         <QuickLogButton
           openSince={metrics.wakeOpenSince} startType="wake" endType="sleep"
-          isLocked={false} recording={recording} onTap={handleRecord}
+          isLocked={metrics.wakeOpenSince !== null && (metrics.mealOpenSince !== null || metrics.studyOpenSince !== null)}
+          recording={recording} onTap={handleRecord}
         />
         <QuickLogButton
           openSince={metrics.mealOpenSince} startType="meal_start" endType="meal_end"
-          isLocked={metrics.wakeOpenSince === null || metrics.studyOpenSince !== null} recording={recording} onTap={handleRecord}
+          isLocked={metrics.mealOpenSince === null && (metrics.wakeOpenSince === null || metrics.studyOpenSince !== null)}
+          recording={recording} onTap={handleRecord}
         />
         <QuickLogButton
           openSince={metrics.studyOpenSince} startType="study_start" endType="study_end"
-          isLocked={metrics.wakeOpenSince === null || metrics.mealOpenSince !== null} recording={recording} onTap={handleRecord}
+          isLocked={metrics.studyOpenSince === null && (metrics.wakeOpenSince === null || metrics.mealOpenSince !== null)}
+          recording={recording} onTap={handleRecord}
           showsStopwatch
         />
       </div>
@@ -236,6 +265,15 @@ export function TodayPage() {
           <p className="text-sm text-red-400">{errorMessage}</p>
           <button onClick={load} className="text-sm font-semibold text-routinity-violet">다시 시도</button>
         </div>
+      )}
+
+      {showSleepReport && (
+        <SleepReportModal
+          isLoading={sleepReportLoading}
+          report={sleepReport}
+          errorMessage={sleepReportError}
+          onClose={() => setShowSleepReport(false)}
+        />
       )}
     </div>
   )
