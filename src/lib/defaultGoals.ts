@@ -8,8 +8,8 @@ export const DEFAULT_STUDY_MINUTES = '300'
  * decision to stop making goal-less users manually opt in, since /reports-* and the score ring
  * are far more useful once *some* goal exists. Only fills in whichever of the two is actually
  * missing, so it never overwrites goals the user (or an earlier call to this same function) has
- * already set — safe to call every time onboarding finishes, including for an existing account
- * signing in on a fresh browser (onboarding is device-local, not per-account).
+ * already set — safe to call every time onboarding finishes, including for an account that has
+ * goals from elsewhere (e.g. iOS) by the time it first reaches onboarding on this browser.
  */
 export async function ensureDefaultGoals(): Promise<void> {
   const goals = await fetchGoals()

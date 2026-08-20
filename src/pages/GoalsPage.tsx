@@ -31,6 +31,7 @@ export function GoalsPage() {
   const [hasStudyGoal, setHasStudyGoal] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [savedMessage, setSavedMessage] = useState<string | null>(null)
 
@@ -57,6 +58,7 @@ export function GoalsPage() {
   useEffect(() => { load() }, [])
 
   async function save() {
+    if (isSaving || isDeleting) return
     setErrorMessage(null)
     setSavedMessage(null)
     setIsSaving(true)
@@ -79,12 +81,20 @@ export function GoalsPage() {
   }
 
   async function handleDelete(type: string) {
+    // Re-entrancy guard on top of the buttons' `disabled` — a double-click before the first
+    // DELETE resolves could otherwise send a second one that hits the now-missing goal and gets
+    // a 404 shown as an error even though the delete already succeeded, or race a concurrent
+    // save() into resurrecting the goal it just deleted.
+    if (isDeleting) return
+    setIsDeleting(true)
     try {
       await deleteGoal(type)
       if (type === GoalTargetType.wakeTime) { setWakeTime(''); setHasWakeGoal(false) }
       else { setStudyMinutes(''); setHasStudyGoal(false) }
     } catch (e) {
       setErrorMessage(e instanceof Error ? e.message : '삭제 실패')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -111,33 +121,33 @@ export function GoalsPage() {
       <Card>
         <p className="font-semibold mb-1">기상 목표</p>
         <p className="text-xs text-white/50 mb-3">몇 시에 기상하고 싶으신가요?</p>
-        <input type="time" value={wakeTime} disabled={isSaving || isLoading} onChange={(e) => setWakeTime(e.target.value)}
+        <input type="time" value={wakeTime} disabled={isSaving || isLoading || isDeleting} onChange={(e) => setWakeTime(e.target.value)}
           className="bg-white/6 border border-routinity-border rounded-xl px-3 py-2 text-white outline-none disabled:opacity-50" />
         {suggestedWakeTime && (
           <button onClick={() => setWakeTime(suggestedWakeTime)} className="ml-2 inline-flex items-center gap-1 text-xs font-semibold text-routinity-violet bg-routinity-violet/12 rounded-full px-2.5 py-1.5">
             <Sparkles className="w-3 h-3" /> 제안: {suggestedWakeTime}
           </button>
         )}
-        {hasWakeGoal && <button onClick={() => handleDelete(GoalTargetType.wakeTime)} disabled={isSaving} className="block mt-3 text-xs text-red-400 font-semibold disabled:opacity-50">목표 삭제</button>}
+        {hasWakeGoal && <button onClick={() => handleDelete(GoalTargetType.wakeTime)} disabled={isSaving || isDeleting} className="block mt-3 text-xs text-red-400 font-semibold disabled:opacity-50">목표 삭제</button>}
       </Card>
 
       <Card>
         <p className="font-semibold mb-1">공부 시간 목표</p>
         <p className="text-xs text-white/50 mb-3">분 단위, 예: 120</p>
-        <input type="number" min={1} max={MAX_STUDY_MINUTES} placeholder="예: 120" value={studyMinutes} disabled={isSaving || isLoading} onChange={(e) => setStudyMinutes(e.target.value)}
+        <input type="number" min={1} max={MAX_STUDY_MINUTES} placeholder="예: 120" value={studyMinutes} disabled={isSaving || isLoading || isDeleting} onChange={(e) => setStudyMinutes(e.target.value)}
           className="bg-white/6 border border-routinity-border rounded-xl px-3 py-2 text-white outline-none w-full disabled:opacity-50" />
         {suggestedStudyMinutes && (
           <button onClick={() => setStudyMinutes(suggestedStudyMinutes)} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-routinity-violet bg-routinity-violet/12 rounded-full px-2.5 py-1.5">
             <Sparkles className="w-3 h-3" /> 제안: {suggestedStudyMinutes}분
           </button>
         )}
-        {hasStudyGoal && <button onClick={() => handleDelete(GoalTargetType.studyDuration)} disabled={isSaving} className="block mt-3 text-xs text-red-400 font-semibold disabled:opacity-50">목표 삭제</button>}
+        {hasStudyGoal && <button onClick={() => handleDelete(GoalTargetType.studyDuration)} disabled={isSaving || isDeleting} className="block mt-3 text-xs text-red-400 font-semibold disabled:opacity-50">목표 삭제</button>}
       </Card>
 
       {errorMessage && <p className="text-sm text-red-400">{errorMessage}</p>}
       {savedMessage && <p className="text-sm text-white/60">{savedMessage}</p>}
 
-      <button onClick={save} disabled={isSaving} className="bg-routinity-violet disabled:opacity-40 rounded-2xl py-3.5 font-semibold">
+      <button onClick={save} disabled={isSaving || isDeleting} className="bg-routinity-violet disabled:opacity-40 rounded-2xl py-3.5 font-semibold">
         {isSaving ? '저장 중...' : '저장'}
       </button>
     </div>
