@@ -248,7 +248,15 @@ export function TodayPage() {
               type="date"
               value={kstDateKey(timelineDate)}
               max={kstDateKey(new Date())}
-              onChange={(e) => setTimelineDate(new Date(`${e.target.value}T12:00:00+09:00`))}
+              onChange={(e) => {
+                // Native date inputs fire onChange with an empty string when the user clears the
+                // field (e.g. backspacing every segment) — constructing a Date from that would be
+                // an Invalid Date, and kstDateKey() below throws on Invalid Date since
+                // Intl.DateTimeFormat#format rejects it, crashing the whole render with no
+                // ErrorBoundary to catch it. Ignore the change instead of committing garbage state.
+                if (!e.target.value) return
+                setTimelineDate(new Date(`${e.target.value}T12:00:00+09:00`))
+              }}
               className="bg-white/6 border border-routinity-border rounded-lg px-2 py-1 text-xs text-white outline-none"
             />
             <button

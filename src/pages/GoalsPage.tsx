@@ -72,8 +72,12 @@ export function GoalsPage() {
     await load()
     setIsSaving(false)
     const failure = results.find((r): r is PromiseRejectedResult => r.status === 'rejected')
-    if (failure) setErrorMessage(failure.reason instanceof Error ? failure.reason.message : '저장 실패')
-    else if (validationError) setErrorMessage(validationError)
+    // Both can be true at once (e.g. the wake-time save fails over the network while the study
+    // minutes value independently fails client-side validation) — surface both instead of letting
+    // one silently replace the other in the single error slot.
+    const failureMessage = failure ? (failure.reason instanceof Error ? failure.reason.message : '저장 실패') : null
+    if (failureMessage && validationError) setErrorMessage(`${failureMessage} / ${validationError}`)
+    else setErrorMessage(failureMessage ?? validationError)
     // A validation error on one field (e.g. 공부 시간) shouldn't hide that the *other* field (e.g.
     // 기상) was actually saved — both messages can render at once, so surface success too instead
     // of only ever showing one or the other.
