@@ -8,7 +8,6 @@ import { TodayPage } from './pages/TodayPage'
 import { AnalysisPage } from './pages/AnalysisPage'
 import { AICoachPage } from './pages/AICoachPage'
 import { GoalsPage } from './pages/GoalsPage'
-import { TimelinePage } from './pages/TimelinePage'
 import { SettingsPage } from './pages/SettingsPage'
 
 // Shown once — the very first time this browser reaches the authenticated app, whether that's
@@ -42,7 +41,6 @@ function RootGate() {
         <Route path="/ai-coach" element={<AICoachPage />} />
       </Route>
       <Route path="/goals" element={<GoalsPage />} />
-      <Route path="/timeline" element={<TimelinePage />} />
       <Route path="/settings" element={<SettingsPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

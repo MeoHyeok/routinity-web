@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { Clock, Target, LogOut } from 'lucide-react'
+import { Target, LogOut } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 export function SettingsPage() {
@@ -14,7 +14,6 @@ export function SettingsPage() {
       </div>
 
       <div className="flex flex-col rounded-2xl overflow-hidden bg-routinity-card border border-routinity-border divide-y divide-routinity-border">
-        <Link to="/timeline" className="px-4 py-3.5 flex items-center gap-2"><Clock className="w-4 h-4" /> 타임라인</Link>
         <Link to="/goals" className="px-4 py-3.5 flex items-center gap-2"><Target className="w-4 h-4" /> 목표 설정</Link>
       </div>
 
