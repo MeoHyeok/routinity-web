@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { ArrowUpRight, ArrowDownRight, ArrowRight } from 'lucide-react'
 import { Card } from '../components/Card'
 import { loadTrend, weekdayLabel } from '../lib/trend'
 import { fetchInsights, GoalTargetType, type Insights } from '../lib/api'
@@ -75,9 +76,12 @@ export function AnalysisPage() {
         <>
           <Card glow>
             <div className="flex flex-col gap-4">
-              <div>
-                <p className="text-xs text-white/50">{window === 'weekly' ? '주간' : '월간'} 평균</p>
-                <p className="text-4xl font-extrabold bg-gradient-to-r from-routinity-violet to-routinity-pink bg-clip-text text-transparent">{averageScore ?? '-'}</p>
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs text-white/50">{window === 'weekly' ? '주간' : '월간'} 평균</p>
+                  <p className="text-4xl font-extrabold bg-gradient-to-r from-routinity-violet to-routinity-pink bg-clip-text text-transparent">{averageScore ?? '-'}</p>
+                </div>
+                {insights?.trend && <TrendBadge trend={insights.trend} />}
               </div>
               <ProgressRow title="루틴 준수" value={averageScore ?? 0} color="bg-routinity-violet" />
               <ProgressRow title="기상 규칙성" value={consistency(computeTrendMissRate(GoalTargetType.wakeTime, points))} color="bg-routinity-orange" />
@@ -111,6 +115,25 @@ export function AnalysisPage() {
       )}
 
       {errorMessage && <p className="text-sm text-red-400">{errorMessage}</p>}
+    </div>
+  )
+}
+
+// Mirrors AnalysisView.swift's trendBadge — surfaces the recent-vs-previous-7-day delta
+// explicitly (not just a direction arrow) so a glance answers "better or worse than before, and
+// by how much" rather than burying the comparison behind the average alone.
+function TrendBadge({ trend }: { trend: NonNullable<Insights['trend']> }) {
+  const delta = trend.recent_avg - trend.previous_avg
+  const Arrow = trend.direction === 'up' ? ArrowUpRight : trend.direction === 'down' ? ArrowDownRight : ArrowRight
+  const color = trend.direction === 'up' ? 'text-routinity-green' : trend.direction === 'down' ? 'text-routinity-pink' : 'text-white/50'
+  const deltaText = delta === 0 ? '지난 7일과 동일' : `지난 7일 대비 ${delta > 0 ? '+' : ''}${delta}점`
+  return (
+    <div className="flex flex-col items-end gap-0.5">
+      <div className={`flex items-center gap-1 text-xs font-semibold ${color}`}>
+        <Arrow className="w-3.5 h-3.5" />
+        <span>최근 7일 {trend.recent_avg}점</span>
+      </div>
+      <span className="text-[10px] text-white/40">{deltaText}</span>
     </div>
   )
 }
