@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { Lightbulb } from 'lucide-react'
 import { Card } from './Card'
 import type { GoalSuggestion } from '../lib/goalSuggestion'
 
@@ -10,7 +11,7 @@ export function GoalSuggestionCard({ suggestion }: { suggestion: GoalSuggestion 
   return (
     <Card glow>
       <div className="flex items-center gap-1.5 mb-2">
-        <span>💡</span>
+        <Lightbulb className="w-4 h-4 text-routinity-orange" />
         <span className="text-sm font-semibold">목표 제안</span>
       </div>
       <p className="text-sm text-white/60 mb-3">

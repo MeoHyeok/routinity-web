@@ -63,17 +63,6 @@ export function logDisplayName(type: LogType): string {
   }
 }
 
-export function logIcon(type: LogType): string {
-  switch (type) {
-    case 'wake': return '☀️'
-    case 'sleep': return '🌙'
-    case 'meal_start': return '🍴'
-    case 'meal_end': return '✅'
-    case 'study_start': return '📖'
-    case 'study_end': return '✅'
-  }
-}
-
 // The backend buckets a "day" as a KST-labeled 기상→취침 session rather than UTC midnight, so
 // the date param requested here has to be computed in KST too (see docs/api-contract.md in the
 // routinity-ios repo — "하루의 정의").

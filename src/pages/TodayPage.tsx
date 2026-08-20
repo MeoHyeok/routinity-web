@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Settings, Sun, BookOpen, Utensils, Coffee, TriangleAlert, type LucideIcon } from 'lucide-react'
 import { Card } from '../components/Card'
+import { LogTypeIcon } from '../components/LogTypeIcon'
 import {
-  fetchScores, recordLog, GoalTargetType, logDisplayName, logIcon,
+  fetchScores, recordLog, GoalTargetType, logDisplayName,
   type LogEntry, type LogType, type ScoresResponse,
 } from '../lib/api'
 import { fetchTodayLogsWithCarryover } from '../lib/todayLogs'
@@ -98,7 +100,9 @@ export function TodayPage() {
           <h1 className="text-2xl font-extrabold bg-gradient-to-r from-routinity-pink to-routinity-violet bg-clip-text text-transparent">루티니티</h1>
           <p className="text-sm text-white/60">오늘 루틴을 기록해보세요</p>
         </div>
-        <Link to="/settings" className="w-10 h-10 rounded-full bg-routinity-card flex items-center justify-center">⚙️</Link>
+        <Link to="/settings" className="w-10 h-10 rounded-full bg-routinity-card flex items-center justify-center">
+          <Settings className="w-4.5 h-4.5" />
+        </Link>
       </div>
 
       <Card glow>
@@ -127,22 +131,22 @@ export function TodayPage() {
       </Card>
 
       <div className="grid grid-cols-3 gap-3">
-        <MetricCard icon="☀️" tint="bg-routinity-orange/35" title="기상"
+        <MetricCard icon={Sun} tint="bg-routinity-orange/35" title="기상"
           value={metrics.actualWakeTime ? timeOnlyFormatter.format(metrics.actualWakeTime) : '-'}
           subtitle={wakeGoal ? `목표 ${wakeGoal.target_value}` : '목표 없음'} />
-        <MetricCard icon="📖" tint="bg-routinity-cyan/35" title="공부"
+        <MetricCard icon={BookOpen} tint="bg-routinity-cyan/35" title="공부"
           value={durationLabel(metrics.totalStudyMinutes, metrics.hasClosedStudySession)}
           subtitle={studyGoal ? `목표 ${studyGoal.target_value}분` : '목표 없음'} />
         <Card className="!p-3 flex flex-col justify-between">
-          <MealRestRow icon="🍴" value={durationLabel(metrics.totalMealMinutes, metrics.hasClosedMealSession)} label="식사" />
-          <MealRestRow icon="☕" value={metrics.restMinutesSoFar != null ? `${metrics.restMinutesSoFar}분` : '-'} label="휴식" />
+          <MealRestRow icon={Utensils} tint="bg-routinity-pink/35" value={durationLabel(metrics.totalMealMinutes, metrics.hasClosedMealSession)} label="식사" />
+          <MealRestRow icon={Coffee} tint="bg-routinity-violet/35" value={metrics.restMinutesSoFar != null ? `${metrics.restMinutesSoFar}분` : '-'} label="휴식" />
         </Card>
       </div>
 
       {carryoverText && (
         <Card>
           <div className="flex gap-2.5 items-start">
-            <span>⚠️</span>
+            <TriangleAlert className="w-4 h-4 text-routinity-orange shrink-0 mt-0.5" />
             <p className="text-sm">{carryoverText}</p>
           </div>
         </Card>
@@ -202,10 +206,10 @@ function ScoreRing({ score }: { score: number | null }) {
   )
 }
 
-function MetricCard({ icon, tint, title, value, subtitle }: { icon: string; tint: string; title: string; value: string; subtitle: string }) {
+function MetricCard({ icon: Icon, tint, title, value, subtitle }: { icon: LucideIcon; tint: string; title: string; value: string; subtitle: string }) {
   return (
     <Card className="!p-3 flex flex-col gap-2 items-start">
-      <div className={`w-8 h-8 rounded-[9px] ${tint} flex items-center justify-center text-sm`}>{icon}</div>
+      <div className={`w-8 h-8 rounded-[9px] ${tint} flex items-center justify-center`}><Icon className="w-4 h-4" /></div>
       <div className="font-bold text-[15px] truncate w-full">{value}</div>
       <div className="text-xs text-white/60">{title}</div>
       <div className="text-[10px] text-white/40">{subtitle}</div>
@@ -213,10 +217,10 @@ function MetricCard({ icon, tint, title, value, subtitle }: { icon: string; tint
   )
 }
 
-function MealRestRow({ icon, value, label }: { icon: string; value: string; label: string }) {
+function MealRestRow({ icon: Icon, tint, value, label }: { icon: LucideIcon; tint: string; value: string; label: string }) {
   return (
     <div className="flex items-center gap-2">
-      <div className="w-5.5 h-5.5 rounded-md bg-routinity-pink/35 flex items-center justify-center text-[10px]">{icon}</div>
+      <div className={`w-5.5 h-5.5 rounded-md ${tint} flex items-center justify-center`}><Icon className="w-3 h-3" /></div>
       <div className="flex flex-col">
         <span className="text-sm font-semibold">{value}</span>
         <span className="text-[10px] text-white/50">{label}</span>
@@ -234,7 +238,6 @@ function QuickLogButton({
   const inProgress = openSince !== null
   const type = inProgress ? endType : startType
   const displayName = logDisplayName(type)
-  const icon = logIcon(type)
   const isRecordingThis = recording === startType || recording === endType
   return (
     <button
@@ -244,7 +247,7 @@ function QuickLogButton({
     >
       <Card className="!p-3 flex items-center gap-3 disabled:opacity-50">
         <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isLocked ? 'bg-routinity-violet/12' : 'bg-routinity-violet/30'}`}>
-          {isRecordingThis ? <Spinner /> : <span>{isLocked ? '🔒' : icon}</span>}
+          {isRecordingThis ? <Spinner /> : <LogTypeIcon type={type} locked={isLocked} className="w-4 h-4" />}
         </div>
         <div className="flex flex-col items-start">
           <span className={`text-sm font-medium ${isLocked ? 'text-white/50' : 'text-white'}`}>{displayName}</span>

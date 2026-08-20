@@ -1,4 +1,5 @@
 import { HashRouter, Routes, Route, Navigate, NavLink, Outlet } from 'react-router-dom'
+import { CircleDashed, BarChart3, Sparkles, type LucideIcon } from 'lucide-react'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { AuthPage } from './pages/AuthPage'
 import { TodayPage } from './pages/TodayPage'
@@ -40,22 +41,22 @@ function TabLayout() {
     <>
       <Outlet />
       <nav className="fixed bottom-0 left-0 right-0 max-w-[480px] mx-auto flex justify-around bg-routinity-card/90 backdrop-blur border-t border-routinity-border py-2.5">
-        <TabLink to="/" icon="⭘" label="오늘" />
-        <TabLink to="/analysis" icon="📊" label="분석" />
-        <TabLink to="/ai-coach" icon="✨" label="AI 코치" />
+        <TabLink to="/" icon={CircleDashed} label="오늘" />
+        <TabLink to="/analysis" icon={BarChart3} label="분석" />
+        <TabLink to="/ai-coach" icon={Sparkles} label="AI 코치" />
       </nav>
     </>
   )
 }
 
-function TabLink({ to, icon, label }: { to: string; icon: string; label: string }) {
+function TabLink({ to, icon: Icon, label }: { to: string; icon: LucideIcon; label: string }) {
   return (
     <NavLink
       to={to}
       end={to === '/'}
       className={({ isActive }) => `flex flex-col items-center gap-1 text-xs px-4 ${isActive ? 'text-routinity-violet' : 'text-white/50'}`}
     >
-      <span>{icon}</span>
+      <Icon className="w-4.5 h-4.5" />
       <span>{label}</span>
     </NavLink>
   )

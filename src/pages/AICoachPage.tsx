@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Sparkles, Lightbulb } from 'lucide-react'
 import { Card } from '../components/Card'
 import { GoalSuggestionCard } from '../components/GoalSuggestionCard'
 import { fetchReport, type Report, type ReportPeriod } from '../lib/api'
@@ -66,7 +67,7 @@ export function AICoachPage() {
         <>
           <Card glow>
             <div className="flex items-center gap-2 mb-3">
-              <span>✨</span>
+              <Sparkles className="w-4 h-4" />
               <span className="text-xs font-semibold text-white/60 flex-1">
                 {report.generated_via === 'claude' ? 'AI 생성 리포트' : '기본 템플릿 리포트'}
               </span>
@@ -81,7 +82,7 @@ export function AICoachPage() {
           {report.suggested_action && (
             <Card glow>
               <div className="flex items-center gap-1.5 mb-2">
-                <span>💡</span>
+                <Lightbulb className="w-4 h-4 text-routinity-orange" />
                 <span className="text-sm font-semibold">다음 액션 제안</span>
               </div>
               <p className="text-[15px]">{report.suggested_action}</p>

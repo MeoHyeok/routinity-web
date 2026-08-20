@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchLogs, deleteLog, logDisplayName, logIcon, kstDateKey, type LogEntry } from '../lib/api'
+import { Inbox } from 'lucide-react'
+import { fetchLogs, deleteLog, logDisplayName, kstDateKey, type LogEntry } from '../lib/api'
+import { LogTypeIcon } from '../components/LogTypeIcon'
 
 const timeFormatter = new Intl.DateTimeFormat('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Seoul' })
 
@@ -51,14 +53,14 @@ export function TimelinePage() {
         <p className="text-sm text-red-400">{errorMessage}</p>
       ) : sorted.length === 0 ? (
         <div className="flex flex-col items-center gap-2 py-10 text-white/40">
-          <span className="text-2xl">📭</span>
+          <Inbox className="w-6 h-6" />
           <p className="text-sm">이 날짜에는 기록이 없습니다.</p>
         </div>
       ) : (
         <ul className="flex flex-col divide-y divide-routinity-border">
           {sorted.map((log) => (
             <li key={log.id} className="flex items-center gap-3.5 py-3">
-              <div className="w-9 h-9 rounded-full bg-routinity-violet/12 flex items-center justify-center text-sm">{logIcon(log.type)}</div>
+              <div className="w-9 h-9 rounded-full bg-routinity-violet/12 flex items-center justify-center"><LogTypeIcon type={log.type} className="w-4 h-4" /></div>
               <span className="flex-1">{logDisplayName(log.type)}</span>
               <span className="text-white/50 text-sm">{timeFormatter.format(new Date(log.timestamp))}</span>
               <button onClick={() => handleDelete(log.id)} className="text-red-400 text-xs">삭제</button>
