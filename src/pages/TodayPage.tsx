@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Settings, Sun, BookOpen, Utensils, Coffee, TriangleAlert, Inbox, type LucideIcon } from 'lucide-react'
+import { Settings, Sun, BookOpen, Utensils, Coffee, TriangleAlert, Inbox, ChevronLeft, ChevronRight, type LucideIcon } from 'lucide-react'
 import { Card } from '../components/Card'
 import { LogTypeIcon } from '../components/LogTypeIcon'
 import { SleepReportModal } from '../components/SleepReportModal'
@@ -18,6 +18,16 @@ const dateHeadingFormatter = new Intl.DateTimeFormat('ko-KR', { year: 'numeric',
 const weekdayFormatter = new Intl.DateTimeFormat('ko-KR', { weekday: 'long', timeZone: 'Asia/Seoul' })
 const timeOnlyFormatter = new Intl.DateTimeFormat('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Seoul' })
 const carryoverWakeFormatter = new Intl.DateTimeFormat('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Seoul' })
+
+// Whole-day arithmetic done via the KST date-key string (not Date.setDate, which shifts by a
+// calendar day in the *runtime's* local timezone) so a day-step lands on the same KST date
+// regardless of what timezone the browser itself is in.
+function shiftKstDate(date: Date, deltaDays: number): Date {
+  const [y, m, d] = kstDateKey(date).split('-').map(Number)
+  const utcMidnight = new Date(Date.UTC(y, m - 1, d + deltaDays))
+  const shiftedKey = new Intl.DateTimeFormat('en-CA', { timeZone: 'UTC' }).format(utcMidnight)
+  return new Date(`${shiftedKey}T12:00:00+09:00`)
+}
 
 export function TodayPage() {
   const [logs, setLogs] = useState<LogEntry[] | null>(null)
@@ -221,13 +231,33 @@ export function TodayPage() {
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-white/60">타임라인</h2>
-          <input
-            type="date"
-            value={kstDateKey(timelineDate)}
-            max={kstDateKey(new Date())}
-            onChange={(e) => setTimelineDate(new Date(`${e.target.value}T12:00:00+09:00`))}
-            className="bg-white/6 border border-routinity-border rounded-lg px-2 py-1 text-xs text-white outline-none"
-          />
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setTimelineDate((d) => shiftKstDate(d, -1))}
+              aria-label="이전 날짜"
+              className="w-6 h-6 flex items-center justify-center text-white/60"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            {/* Tapping the date text itself still opens the browser's native calendar, for
+                jumping further back than one day at a time — the chevrons are just for the
+                common case of stepping day by day. */}
+            <input
+              type="date"
+              value={kstDateKey(timelineDate)}
+              max={kstDateKey(new Date())}
+              onChange={(e) => setTimelineDate(new Date(`${e.target.value}T12:00:00+09:00`))}
+              className="bg-white/6 border border-routinity-border rounded-lg px-2 py-1 text-xs text-white outline-none"
+            />
+            <button
+              onClick={() => setTimelineDate((d) => shiftKstDate(d, 1))}
+              disabled={isViewingToday}
+              aria-label="다음 날짜"
+              className="w-6 h-6 flex items-center justify-center text-white/60 disabled:opacity-30"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
         {(() => {
           const displayedLogs = isViewingToday ? logs : pastLogs
