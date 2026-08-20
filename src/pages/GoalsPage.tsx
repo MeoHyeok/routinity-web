@@ -3,9 +3,13 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Wand2, Sparkles } from 'lucide-react'
 import { Card } from '../components/Card'
 import { fetchGoals, upsertGoal, deleteGoal, GoalTargetType } from '../lib/api'
+import { DEFAULT_WAKE_TIME, DEFAULT_STUDY_MINUTES } from '../lib/defaultGoals'
 
-const starterWakeTime = '07:00'
-const starterStudyMinutes = '120'
+// Same values OnboardingPage auto-applies for a goal-less user — kept as one source so this
+// fallback card (shown if that auto-set somehow didn't happen, e.g. it failed silently) never
+// suggests different numbers than what's already been set behind the scenes.
+const starterWakeTime = DEFAULT_WAKE_TIME
+const starterStudyMinutes = DEFAULT_STUDY_MINUTES
 
 // Mirrors the server's own "target_value must be a positive integer (minutes)" rule for
 // study_duration, checked client-side first so the raw/ungrammatical server error never surfaces.
