@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Sparkles, Lightbulb } from 'lucide-react'
 import { Card } from '../components/Card'
 import { GoalSuggestionCard } from '../components/GoalSuggestionCard'
+import { Spinner } from '../components/Spinner'
 import { TimeBreakdown } from '../components/TimeBreakdown'
 import { fetchReport, type Report, type ReportPeriod } from '../lib/api'
 import { loadTrend } from '../lib/trend'
@@ -63,7 +64,7 @@ export function AICoachPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-10"><div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" /></div>
+        <div className="flex justify-center py-10"><Spinner /></div>
       ) : report ? (
         <>
           <Card glow>

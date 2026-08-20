@@ -72,7 +72,10 @@ export function GoalsPage() {
     const failure = results.find((r): r is PromiseRejectedResult => r.status === 'rejected')
     if (failure) setErrorMessage(failure.reason instanceof Error ? failure.reason.message : '저장 실패')
     else if (validationError) setErrorMessage(validationError)
-    else if (results.some((r) => r.status === 'fulfilled')) setSavedMessage('저장되었습니다.')
+    // A validation error on one field (e.g. 공부 시간) shouldn't hide that the *other* field (e.g.
+    // 기상) was actually saved — both messages can render at once, so surface success too instead
+    // of only ever showing one or the other.
+    if (!failure && results.some((r) => r.status === 'fulfilled')) setSavedMessage('저장되었습니다.')
   }
 
   async function handleDelete(type: string) {

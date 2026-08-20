@@ -4,6 +4,7 @@ import { Settings, Sun, BookOpen, Utensils, Coffee, TriangleAlert, Inbox, Chevro
 import { Card } from '../components/Card'
 import { LogTypeIcon } from '../components/LogTypeIcon'
 import { SleepReportModal } from '../components/SleepReportModal'
+import { Spinner } from '../components/Spinner'
 import { TimeBreakdown } from '../components/TimeBreakdown'
 import {
   fetchScores, fetchLogs, fetchReport, recordLog, kstDateKey, shiftKstDateKey, GoalTargetType, logDisplayName,
@@ -281,7 +282,12 @@ export function TodayPage() {
           // Computed client-side from that day's own logs (not the AI report's time_breakdown,
           // which is period-scoped and cached once a day) so the chart stays live and works for
           // any date the timeline picker lands on, not just whichever day last generated a report.
-          const dayMetrics = computeRoutineDayMetrics(displayedLogs)
+          // For a past date, "now" must be capped at that day's own last log — otherwise a day
+          // whose 취침 was never logged (wakeOpenSince stays open) computes restMinutesSoFar against
+          // the real current time, which can be days later than the date being viewed and balloons
+          // 휴식/활동 시간 into a nonsensical number.
+          const lastLogTime = displayedLogs.reduce((max, l) => Math.max(max, new Date(l.timestamp).getTime()), 0)
+          const dayMetrics = computeRoutineDayMetrics(displayedLogs, isViewingToday ? new Date() : new Date(lastLogTime))
           const breakdown = {
             meal_minutes: dayMetrics.totalMealMinutes,
             study_minutes: dayMetrics.totalStudyMinutes,
@@ -324,10 +330,6 @@ export function TodayPage() {
       )}
     </div>
   )
-}
-
-function Spinner() {
-  return <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
 }
 
 function ScoreRing({ score }: { score: number | null }) {

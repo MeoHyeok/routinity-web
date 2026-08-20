@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ArrowUpRight, ArrowDownRight, ArrowRight } from 'lucide-react'
 import { Card } from '../components/Card'
+import { Spinner } from '../components/Spinner'
 import { loadTrend, weekdayLabel } from '../lib/trend'
 import { fetchInsights, GoalTargetType, type Insights } from '../lib/api'
 import {
@@ -141,10 +142,6 @@ function TrendBadge({ trend }: { trend: NonNullable<Insights['trend']> }) {
 function consistency(missRate: number | null): number {
   if (missRate === null) return 0
   return Math.round((1 - missRate) * 100)
-}
-
-function Spinner() {
-  return <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
 }
 
 function ProgressRow({ title, value, color }: { title: string; value: number; color: string }) {

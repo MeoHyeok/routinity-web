@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { HashRouter, Routes, Route, Navigate, NavLink, Outlet } from 'react-router-dom'
 import { CircleDashed, BarChart3, Sparkles, type LucideIcon } from 'lucide-react'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { Spinner } from './components/Spinner'
 import { AuthPage } from './pages/AuthPage'
 import { OnboardingPage } from './pages/OnboardingPage'
 import { TodayPage } from './pages/TodayPage'
@@ -24,7 +25,7 @@ function RootGate() {
   if (!hasLoadedInitialSession) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+        <Spinner />
       </div>
     )
   }

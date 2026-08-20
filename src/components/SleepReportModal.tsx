@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 import { Card } from './Card'
+import { Spinner } from './Spinner'
 import { TimeBreakdown } from './TimeBreakdown'
 import type { Report } from '../lib/api'
 
@@ -28,7 +29,7 @@ export function SleepReportModal({
         </div>
 
         {isLoading ? (
-          <div className="flex justify-center py-10"><div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" /></div>
+          <div className="flex justify-center py-10"><Spinner /></div>
         ) : report ? (
           <>
             <Card>
