@@ -4,7 +4,7 @@ import { Settings, Sun, BookOpen, Utensils, Coffee, TriangleAlert, Inbox, type L
 import { Card } from '../components/Card'
 import { LogTypeIcon } from '../components/LogTypeIcon'
 import {
-  fetchScores, recordLog, deleteLog, GoalTargetType, logDisplayName,
+  fetchScores, fetchLogs, recordLog, deleteLog, kstDateKey, GoalTargetType, logDisplayName,
   type LogEntry, type LogType, type ScoresResponse,
 } from '../lib/api'
 import { fetchTodayLogsWithCarryover } from '../lib/todayLogs'
@@ -26,6 +26,14 @@ export function TodayPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  // Timeline section's own date selection — kept local to that section rather than driving the
+  // rest of the page (metrics/scores/quick-log buttons stay pinned to today regardless of what
+  // date is being browsed in the timeline below).
+  const [timelineDate, setTimelineDate] = useState(new Date())
+  const [pastLogs, setPastLogs] = useState<LogEntry[] | null>(null)
+  const [pastLogsError, setPastLogsError] = useState<string | null>(null)
+  const isViewingToday = kstDateKey(timelineDate) === kstDateKey(new Date())
 
   // Guards against two overlapping `load()` calls (e.g. React StrictMode's double-invoked mount
   // effect, or a retry tap landing while an earlier call is still in flight) — only the most
@@ -57,6 +65,17 @@ export function TodayPage() {
 
   useEffect(() => { load() }, [load])
 
+  useEffect(() => {
+    if (isViewingToday) { setPastLogs(null); setPastLogsError(null); return }
+    let ignore = false
+    setPastLogs(null)
+    setPastLogsError(null)
+    fetchLogs(timelineDate)
+      .then((result) => { if (!ignore) setPastLogs(result) })
+      .catch((e) => { if (!ignore) setPastLogsError(e instanceof Error ? e.message : '불러오기 실패') })
+    return () => { ignore = true }
+  }, [timelineDate, isViewingToday])
+
   async function handleRecord(type: LogType) {
     setRecording(type)
     try {
@@ -74,7 +93,12 @@ export function TodayPage() {
     setDeletingId(id)
     try {
       await deleteLog(id)
-      await load()
+      // Today's own logs feed the metric cards/quick-log buttons above, so a delete there needs
+      // the full load() to keep those in sync — a past date being browsed doesn't affect any of
+      // that, so it's cheaper (and doesn't burn into the 14-day trend refetch's rate-limit budget)
+      // to just drop the row locally instead.
+      if (isViewingToday) await load()
+      else setPastLogs((prev) => prev?.filter((l) => l.id !== id) ?? null)
     } catch (e) {
       setDeleteError(e instanceof Error ? e.message : '삭제에 실패했어요.')
     } finally {
@@ -185,31 +209,52 @@ export function TodayPage() {
       </div>
 
       <div className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-white/60">타임라인</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-white/60">타임라인</h2>
+          <input
+            type="date"
+            value={kstDateKey(timelineDate)}
+            max={kstDateKey(new Date())}
+            onChange={(e) => setTimelineDate(new Date(`${e.target.value}T12:00:00+09:00`))}
+            className="bg-white/6 border border-routinity-border rounded-lg px-2 py-1 text-xs text-white outline-none"
+          />
+        </div>
         <Card className="!p-0 overflow-hidden">
-          {logs.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-8 text-white/40">
-              <Inbox className="w-6 h-6" />
-              <p className="text-sm">아직 기록이 없어요.</p>
-            </div>
-          ) : (
-            <ul className="flex flex-col divide-y divide-routinity-border px-4">
-              {[...logs].sort((a, b) => a.timestamp.localeCompare(b.timestamp)).map((log) => (
-                <li key={log.id} className="flex items-center gap-3 py-3">
-                  <div className="w-8 h-8 rounded-full bg-routinity-violet/12 flex items-center justify-center shrink-0"><LogTypeIcon type={log.type} className="w-3.5 h-3.5" /></div>
-                  <span className="flex-1 text-sm">{logDisplayName(log.type)}</span>
-                  <span className="text-white/50 text-sm">{timeOnlyFormatter.format(new Date(log.timestamp))}</span>
-                  <button
-                    onClick={() => handleDelete(log.id)}
-                    disabled={deletingId !== null}
-                    className="text-red-400 text-xs disabled:opacity-40"
-                  >
-                    {deletingId === log.id ? '삭제 중' : '삭제'}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+          {(() => {
+            const displayedLogs = isViewingToday ? logs : pastLogs
+            if (!isViewingToday && pastLogsError) {
+              return <p className="text-sm text-red-400 text-center py-8">{pastLogsError}</p>
+            }
+            if (!displayedLogs) {
+              return <div className="flex justify-center py-8"><Spinner /></div>
+            }
+            if (displayedLogs.length === 0) {
+              return (
+                <div className="flex flex-col items-center gap-2 py-8 text-white/40">
+                  <Inbox className="w-6 h-6" />
+                  <p className="text-sm">{isViewingToday ? '아직 기록이 없어요.' : '이 날짜에는 기록이 없어요.'}</p>
+                </div>
+              )
+            }
+            return (
+              <ul className="flex flex-col divide-y divide-routinity-border px-4">
+                {[...displayedLogs].sort((a, b) => a.timestamp.localeCompare(b.timestamp)).map((log) => (
+                  <li key={log.id} className="flex items-center gap-3 py-3">
+                    <div className="w-8 h-8 rounded-full bg-routinity-violet/12 flex items-center justify-center shrink-0"><LogTypeIcon type={log.type} className="w-3.5 h-3.5" /></div>
+                    <span className="flex-1 text-sm">{logDisplayName(log.type)}</span>
+                    <span className="text-white/50 text-sm">{timeOnlyFormatter.format(new Date(log.timestamp))}</span>
+                    <button
+                      onClick={() => handleDelete(log.id)}
+                      disabled={deletingId !== null}
+                      className="text-red-400 text-xs disabled:opacity-40"
+                    >
+                      {deletingId === log.id ? '삭제 중' : '삭제'}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )
+          })()}
         </Card>
         {deleteError && <p className="text-sm text-red-400">{deleteError}</p>}
       </div>
