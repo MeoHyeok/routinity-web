@@ -11,11 +11,15 @@ import { DEFAULT_WAKE_TIME, DEFAULT_STUDY_MINUTES } from '../lib/defaultGoals'
 const starterWakeTime = DEFAULT_WAKE_TIME
 const starterStudyMinutes = DEFAULT_STUDY_MINUTES
 
-// Mirrors the server's own "target_value must be a positive integer (minutes)" rule for
-// study_duration, checked client-side first so the raw/ungrammatical server error never surfaces.
-function isPositiveIntegerString(value: string): boolean {
+const MAX_STUDY_MINUTES = 1440 // minutes in a day — mirrors the server's own upper bound
+
+// Mirrors the server's own study_duration rules (positive integer, at most 1440 = a day's worth
+// of minutes) so the raw server error never surfaces — checked client-side first.
+function studyMinutesError(value: string): string | null {
   const trimmed = value.trim()
-  return /^-?\d+$/.test(trimmed) && Number(trimmed) >= 1
+  if (!/^-?\d+$/.test(trimmed) || Number(trimmed) < 1) return '공부 시간 목표는 1 이상의 숫자(분)로 입력해주세요.'
+  if (Number(trimmed) > MAX_STUDY_MINUTES) return `공부 시간 목표는 하루 최대 ${MAX_STUDY_MINUTES}분(24시간)까지 입력할 수 있어요.`
+  return null
 }
 
 export function GoalsPage() {
@@ -60,9 +64,7 @@ export function GoalsPage() {
     // failing doesn't stop the other's edit from being sent.
     const attempts: Promise<unknown>[] = []
     if (wakeTime) attempts.push(upsertGoal(GoalTargetType.wakeTime, wakeTime))
-    const validationError = studyMinutes && !isPositiveIntegerString(studyMinutes)
-      ? '공부 시간 목표는 1 이상의 숫자(분)로 입력해주세요.'
-      : null
+    const validationError = studyMinutes ? studyMinutesError(studyMinutes) : null
     if (studyMinutes && !validationError) attempts.push(upsertGoal(GoalTargetType.studyDuration, studyMinutes))
     const results = await Promise.allSettled(attempts)
     await load()
@@ -119,7 +121,7 @@ export function GoalsPage() {
       <Card>
         <p className="font-semibold mb-1">공부 시간 목표</p>
         <p className="text-xs text-white/50 mb-3">분 단위, 예: 120</p>
-        <input type="number" placeholder="예: 120" value={studyMinutes} onChange={(e) => setStudyMinutes(e.target.value)}
+        <input type="number" min={1} max={MAX_STUDY_MINUTES} placeholder="예: 120" value={studyMinutes} onChange={(e) => setStudyMinutes(e.target.value)}
           className="bg-white/6 border border-routinity-border rounded-xl px-3 py-2 text-white outline-none w-full" />
         {suggestedStudyMinutes && (
           <button onClick={() => setStudyMinutes(suggestedStudyMinutes)} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-routinity-violet bg-routinity-violet/12 rounded-full px-2.5 py-1.5">
