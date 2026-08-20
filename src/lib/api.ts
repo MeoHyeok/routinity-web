@@ -191,6 +191,10 @@ export interface Insights {
   best_weekday: { weekday: number; label: string; avg_daily_score: number } | null
   worst_weekday: { weekday: number; label: string; avg_daily_score: number } | null
   trend: { direction: 'up' | 'down' | 'flat'; recent_avg: number; previous_avg: number } | null
+  // Consecutive days (counting back from today) with at least one log — unlike TodayPage's
+  // computeStreakDays (which requires daily_score >= 80 and so is always 0 without goals), this
+  // counts activity regardless of whether any goal is set. 0 if today has no logs yet.
+  current_streak_days: number
 }
 
 export async function fetchInsights(): Promise<Insights> {
